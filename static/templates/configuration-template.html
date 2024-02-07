@@ -36,8 +36,8 @@
     </nav>
 
     <div class="d-flex flex-column justify-content-center align-items-center input-area" id="input-block">
-        <div class="rounded-3 p-4 bg-primary text-white input-block" id="configuration-div">
-            <form id="configuration-form" hx-put="/configuration/change" hx-swap="none">
+        <div class="rounded-3 p-4 bg-primary text-white input-block">
+            <form hx-put="/configuration/change" hx-swap="none">
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
                     <input type="number" name="time-plus" id="time-plus" class="form-control exp-input" min="0"

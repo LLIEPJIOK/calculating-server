@@ -11,7 +11,7 @@ import (
 type Expression struct {
 	Input           string
 	Result          float64
-	Id              int
+	Id              string
 	Status          string
 	CreationTime    time.Time
 	CalculationTime time.Time
@@ -38,45 +38,45 @@ func isDigit(ch uint8) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-func (e *Expression) Parse() error {
+func (exp *Expression) Parse() error {
 	st := make([]uint8, 0)
 	var prevChar uint8 = '('
 	bracketsCnt := 0
-	for i := 0; i < len(e.Input); i++ {
-		ch := e.Input[i]
+	for i := 0; i < len(exp.Input); i++ {
+		ch := exp.Input[i]
 		if isDigit(ch) {
 			if isDigit(prevChar) {
 				err := errors.New("two numbers in a row")
-				e.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
 			}
-			length := strings.IndexAny(e.Input[i:], "-+*/() \t")
+			length := strings.IndexAny(exp.Input[i:], "-+*/() \t")
 			if length == -1 {
-				length = len(e.Input) - i
+				length = len(exp.Input) - i
 			}
-			numb, err := strconv.ParseFloat(e.Input[i:i+length], 64)
+			numb, err := strconv.ParseFloat(exp.Input[i:i+length], 64)
 			if err != nil {
-				e.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
 			}
-			e.rpn = append(e.rpn, numb)
+			exp.rpn = append(exp.rpn, numb)
 			i += length - 1
 		} else if ch == '(' {
 			if prevChar == ')' {
 				err := errors.New("incorrect placement of brackets")
-				e.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
 			}
 			bracketsCnt++
 			st = append(st, ch)
 		} else if ch == ')' {
 			for len(st) != 0 && st[len(st)-1] != '(' {
-				e.rpn = append(e.rpn, st[len(st)-1])
+				exp.rpn = append(exp.rpn, st[len(st)-1])
 				st = st[:len(st)-1]
 			}
 			if len(st) == 0 || !isDigit(prevChar) {
 				err := errors.New("incorrect placement of brackets")
-				e.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				fmt.Println(prevChar)
 				return err
 			}
@@ -86,12 +86,12 @@ func (e *Expression) Parse() error {
 			continue
 		} else if !strings.Contains("-+*/()", string(ch)) {
 			err := fmt.Errorf("unknown math symbol: %v", ch)
-			e.Status = fmt.Sprintf("invalid expression: %v", err)
+			exp.Status = fmt.Sprintf("invalid expression: %v", err)
 			return err
 		} else {
 			if !isDigit(prevChar) && !(prevChar == '(' && (ch == '-' || ch == '+')) {
 				err := errors.New("incorrect placement of operations")
-				e.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
 			}
 			if len(st) != 0 {
@@ -100,7 +100,7 @@ func (e *Expression) Parse() error {
 					if top == '(' || ((top == '-' || top == '+') && (ch == '*' || ch == '/')) {
 						break
 					}
-					e.rpn = append(e.rpn, top)
+					exp.rpn = append(exp.rpn, top)
 					st = st[:len(st)-1]
 				}
 			}
@@ -115,20 +115,20 @@ func (e *Expression) Parse() error {
 		prevChar = ch
 	}
 	for len(st) != 0 {
-		e.rpn = append(e.rpn, st[len(st)-1])
+		exp.rpn = append(exp.rpn, st[len(st)-1])
 		st = st[:len(st)-1]
 	}
-	if len(e.rpn) == 0 {
+	if len(exp.rpn) == 0 {
 		err := errors.New("empty expression")
-		e.Status = fmt.Sprintf("invalid expression: %v", err)
+		exp.Status = fmt.Sprintf("invalid expression: %v", err)
 		return err
 	} else if bracketsCnt != 0 {
 		err := errors.New("incorrect placement of brackets")
-		e.Status = fmt.Sprintf("invalid expression: %v", err)
+		exp.Status = fmt.Sprintf("invalid expression: %v", err)
 		return err
 	} else if !isDigit(prevChar) && prevChar != ')' {
 		err := errors.New("incorrect placement of operations")
-		e.Status = fmt.Sprintf("invalid expression: %v", err)
+		exp.Status = fmt.Sprintf("invalid expression: %v", err)
 		return err
 	}
 	return nil
@@ -184,10 +184,14 @@ func (exp *Expression) Calculate() {
 }
 
 func (exp Expression) String() string {
-	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation date: `%s`, Status: `%s`",
+	str := fmt.Sprintf("Id: `%s`, Expression: `%s`, Creation date: `%s`, Status: `%s`",
 		exp.Id, exp.Input, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
 	if exp.Status == "calculated" {
 		str += fmt.Sprintf(",  Result: `%v`, Calculation date: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
 	}
 	return str
+}
+
+func (exp Expression) Contains(id string) bool {
+	return strings.Contains(exp.Id, id)
 }

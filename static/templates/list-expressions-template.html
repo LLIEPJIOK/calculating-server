@@ -10,6 +10,7 @@
         integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
         crossorigin="anonymous"></script>
     <title>List expressions</title>
+
 </head>
 
 <body>
@@ -40,7 +41,7 @@
         <h3>Your expressions:</h3>
         <div class="col-3 mr-4">
             <form class="d-flex mb-4" role="search">
-                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                <input class="form-control me-2" type="number" placeholder="Search" name="id">
                 <button class="btn btn-primary" type="submit">Search</button>
             </form>
         </div>
@@ -48,8 +49,10 @@
     <div>
         <div class="list">
             <ul class="list-group fs-5" id="expression-list">
-                {{ range $key, $value := . }}
+                {{ range $key, $value := .Data}}
+                {{ if $value.Contains $.SearchId }}
                 <li class="list-group-item bg-primary text-white">{{ $value.String }}</li>
+                {{ end }}
                 {{ end }}
             </ul>
         </div>

@@ -11,11 +11,12 @@ import (
 )
 
 type DataBase struct {
-	Data            map[int]*Expression
+	Data            map[string]*Expression
 	NextId          int
 	ExpressionsChan chan *Expression
 	LastInputs      []*Expression
 	OperationTime   *OperationTime
+	SearchId        string
 }
 
 func (db *DataBase) Add(exp *Expression) {
@@ -23,7 +24,7 @@ func (db *DataBase) Add(exp *Expression) {
 		exp.Status = "in queue"
 		db.ExpressionsChan <- exp
 	}
-	exp.Id = db.NextId
+	exp.Id = strconv.Itoa(db.NextId)
 	db.NextId++
 	db.Data[exp.Id] = exp
 }
@@ -34,7 +35,7 @@ var (
 	listExpressionsTemplate = template.Must(template.ParseFiles("static/templates/list-expressions-template.html"))
 	configurationTemplate   = template.Must(template.ParseFiles("static/templates/configuration-template.html"))
 	db                      = DataBase{
-		Data:            make(map[int]*Expression),
+		Data:            make(map[string]*Expression),
 		NextId:          1,
 		ExpressionsChan: make(chan *Expression),
 		OperationTime:   NewOperationTime(),
@@ -60,6 +61,11 @@ func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ListExpressionsHandler(w http.ResponseWriter, r *http.Request) {
+	db.SearchId = r.URL.Query().Get("id")
+	listExpressionsTemplate.Execute(w, db)
+}
+
+func FindExpressionsHandler(w http.ResponseWriter, r *http.Request) {
 	listExpressionsTemplate.Execute(w, db.Data)
 }
 
