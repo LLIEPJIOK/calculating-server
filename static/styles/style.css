@@ -1,0 +1,27 @@
+body {
+    overflow-y: scroll;
+}
+
+li {
+    margin-right: 30px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.input-area {
+    height: 80vh;
+}
+
+.input-block {
+    width: 33vw;
+}
+
+.page-header {
+    height: 30px;
+    margin: 20px 30px 10px 30px;
+}
+
+.list {
+    width: 60vw;
+    margin: 0px 30px;
+}
