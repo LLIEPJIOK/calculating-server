@@ -15,7 +15,7 @@
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-primary" id="intro-dm">
+    <nav class="navbar navbar-expand navbar-light bg-primary" id="intro-dm">
         <div class="container" bg-primary>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
@@ -29,7 +29,7 @@
                         <a class="nav-link text-white" href="/configuration">Configuration</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-white" href="/page2" hx-get="/page2">Resources</a>
+                        <a class="nav-link text-white" href="/page2">Resources</a>
                     </li>
                 </ul>
             </div>
@@ -38,25 +38,36 @@
 
 
     <div class="page-header d-flex justify-content-between">
-        <h3>Your expressions:</h3>
+        <h3>
+            {{ if eq .SearchId "" }}
+            All expressions:
+            {{ else }}
+            Search expressions by id = `{{ .SearchId }}`:
+            {{ end }}
+        </h3>
         <div class="col-3 mr-4">
             <form class="d-flex mb-4" role="search">
-                <input class="form-control me-2" type="number" placeholder="Search" name="id">
+                <input class="form-control me-2" type="number" placeholder="Search" name="id" min="1">
                 <button class="btn btn-primary" type="submit">Search</button>
             </form>
         </div>
     </div>
-    <div>
-        <div class="list">
-            <ul class="list-group fs-5" id="expression-list">
-                {{ range $key, $value := .Data}}
-                {{ if $value.Contains $.SearchId }}
-                <li class="list-group-item bg-primary text-white">{{ $value.String }}</li>
-                {{ end }}
-                {{ end }}
-            </ul>
-        </div>
+    <div class="list">
+        <ul class="list-group fs-5" id="expression-list">
+            {{ range $key, $value := .Data}}
+            {{ if $value.Contains $.SearchId }}
+            <li class="list-group-item bg-primary text-white">{{ $value.String }}</li>
+            {{ end }}
+            {{ end }}
+        </ul>
     </div>
+    {{ if ne .SearchId "" }}
+    <form class="m-4">
+        <button class="btn btn-primary">
+            <a class="nav-link text-white" href="/list-expressions">All expressions</a>
+        </button>
+    </form>
+    {{ end }}
 </body>
 
 </html>

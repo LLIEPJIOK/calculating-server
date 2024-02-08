@@ -30,10 +30,10 @@ func (db *DataBase) Add(exp *Expression) {
 }
 
 var (
-	inputExpressionTemplate = template.Must(template.ParseFiles("static/templates/input-expression-template.html"))
+	inputExpressionTemplate = template.Must(template.ParseFiles("static/templates/inputExpressionTemplate.html"))
 	inputListTemplate       = template.Must(template.ParseFiles("static/templates/inputListTemplate.html"))
-	listExpressionsTemplate = template.Must(template.ParseFiles("static/templates/list-expressions-template.html"))
-	configurationTemplate   = template.Must(template.ParseFiles("static/templates/configuration-template.html"))
+	listExpressionsTemplate = template.Must(template.ParseFiles("static/templates/listExpressionsTemplate.html"))
+	configurationTemplate   = template.Must(template.ParseFiles("static/templates/configurationTemplate.html"))
 	db                      = DataBase{
 		Data:            make(map[string]*Expression),
 		NextId:          1,
@@ -54,7 +54,7 @@ func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Add(exp)
 	db.LastInputs = append([]*Expression{exp}, db.LastInputs...)
-	if len(db.LastInputs) == 11 {
+	if len(db.LastInputs) >= 11 {
 		db.LastInputs = db.LastInputs[:10]
 	}
 	inputListTemplate.Execute(w, db.LastInputs)
