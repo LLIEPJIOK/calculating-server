@@ -1,45 +1,31 @@
 package main
 
 import (
+	"calculating-server/expressions"
+	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 )
 
-type DataBase struct {
-	Data            map[string]*Expression
-	NextId          int
-	ExpressionsChan chan *Expression
-	LastInputs      []*Expression
-	OperationTime   *OperationTime
-	SearchId        string
-}
+type ExpressionKey string
 
-func (db *DataBase) Add(exp *Expression) {
-	if err := exp.Parse(); err == nil {
-		exp.Status = "in queue"
-		db.ExpressionsChan <- exp
-	}
-	exp.Id = strconv.Itoa(db.NextId)
-	db.NextId++
-	db.Data[exp.Id] = exp
-}
+const (
+	keyExpression ExpressionKey = "expression"
+)
 
 var (
+	db              = expressions.NewDB()
+	expressionsChan = make(chan *expressions.Expression)
+
 	inputExpressionTemplate = template.Must(template.ParseFiles("static/templates/inputExpressionTemplate.html"))
 	inputListTemplate       = template.Must(template.ParseFiles("static/templates/inputListTemplate.html"))
 	listExpressionsTemplate = template.Must(template.ParseFiles("static/templates/listExpressionsTemplate.html"))
 	configurationTemplate   = template.Must(template.ParseFiles("static/templates/configurationTemplate.html"))
-	db                      = DataBase{
-		Data:            make(map[string]*Expression),
-		NextId:          1,
-		ExpressionsChan: make(chan *Expression),
-		OperationTime:   NewOperationTime(),
-	}
 )
 
 func InputExpressionHandler(w http.ResponseWriter, r *http.Request) {
@@ -47,60 +33,85 @@ func InputExpressionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
-	input := r.PostFormValue("expression")
-	exp := &Expression{
-		Input:        input,
-		CreationTime: time.Now(),
+	exp, ok := r.Context().Value(keyExpression).(*expressions.Expression)
+	if !ok {
+		http.Error(w, "expression not found in context", http.StatusInternalServerError)
+		return
 	}
-	db.Add(exp)
-	db.LastInputs = append([]*Expression{exp}, db.LastInputs...)
-	if len(db.LastInputs) >= 11 {
-		db.LastInputs = db.LastInputs[:10]
-	}
-	inputListTemplate.Execute(w, db.LastInputs)
+	db.InsertExpressionInBD(exp)
+	expressionsChan <- exp
+	exp.Status = "in queue"
 }
 
 func ListExpressionsHandler(w http.ResponseWriter, r *http.Request) {
-	db.SearchId = r.URL.Query().Get("id")
-	listExpressionsTemplate.Execute(w, db)
-}
-
-func FindExpressionsHandler(w http.ResponseWriter, r *http.Request) {
-	listExpressionsTemplate.Execute(w, db.Data)
+	expressions := db.GetExpressionById(r.URL.Query().Get("id"))
+	listExpressionsTemplate.Execute(w, expressions)
 }
 
 func ConfigurationHandler(w http.ResponseWriter, r *http.Request) {
-	configurationTemplate.Execute(w, db.OperationTime)
+	configurationTemplate.Execute(w, db)
 }
 
 func ChangeConfigurationHandler(w http.ResponseWriter, r *http.Request) {
-	timePlus, _ := strconv.Atoi(r.PostFormValue("time-plus"))
-	timeMinus, _ := strconv.Atoi(r.PostFormValue("time-minus"))
-	timeMultiply, _ := strconv.Atoi(r.PostFormValue("time-multiply"))
-	timeDivide, _ := strconv.Atoi(r.PostFormValue("time-divide"))
-	db.OperationTime = &OperationTime{
-		TimePlus:     timePlus,
-		TimeMinus:    timeMinus,
-		TimeMultiply: timeMultiply,
-		TimeDivide:   timeDivide,
-	}
+	timePlus, _ := strconv.ParseInt(r.PostFormValue("time-plus"), 10, 64)
+	timeMinus, _ := strconv.ParseInt(r.PostFormValue("time-minus"), 10, 64)
+	timeMultiply, _ := strconv.ParseInt(r.PostFormValue("time-multiply"), 10, 64)
+	timeDivide, _ := strconv.ParseInt(r.PostFormValue("time-divide"), 10, 64)
+
+	db.UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide)
+}
+
+func RecoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				http.Error(w, fmt.Sprintf("panic: %v", err), http.StatusInternalServerError)
+				log.Println("recovering from panic:", err)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func ParsingMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		input := r.PostFormValue("expression")
+		exp, err := expressions.NewExpression(input)
+		if err != nil {
+			exp.Status = err.Error()
+		} else {
+			ctx := context.WithValue(r.Context(), keyExpression, exp)
+			r = r.WithContext(ctx)
+			next.ServeHTTP(w, r)
+		}
+		db.UpdateStatus(exp)
+		inputListTemplate.Execute(w, db.LastInputs)
+	})
 }
 
 func init() {
 	for range 10 {
 		go func() {
-			for exp := range db.ExpressionsChan {
+			for exp := range expressionsChan {
 				exp.Status = "calculating"
+				db.UpdateStatus(exp)
+
 				exp.Calculate()
+
+				db.UpdateStatus(exp)
+				db.UpdateResult(exp)
 			}
 		}()
 	}
 }
 
 func main() {
+	defer db.Close()
+
 	r := mux.NewRouter()
+	r.Use(RecoverMiddleware)
 	r.HandleFunc("/", InputExpressionHandler).Methods("GET")
-	r.HandleFunc("/add-expression", AddExpressionHandler).Methods("POST")
+	r.HandleFunc("/add-expression", ParsingMiddleware(AddExpressionHandler)).Methods("POST")
 	r.HandleFunc("/list-expressions", ListExpressionsHandler).Methods("GET")
 	r.HandleFunc("/configuration", ConfigurationHandler).Methods("GET")
 	r.HandleFunc("/configuration/change", ChangeConfigurationHandler).Methods("PUT")

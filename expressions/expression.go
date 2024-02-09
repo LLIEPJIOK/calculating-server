@@ -1,4 +1,4 @@
-package main
+package expressions
 
 import (
 	"errors"
@@ -8,53 +8,55 @@ import (
 	"time"
 )
 
+var (
+	operationsTime = map[string]int64{
+		"time_plus":     200,
+		"time_minus":    200,
+		"time_multiply": 200,
+		"time_divide":   200,
+	}
+)
+
 type Expression struct {
-	Input           string
+	Id              int64
+	Exp             string
 	Result          float64
-	Id              string
 	Status          string
 	CreationTime    time.Time
 	CalculationTime time.Time
 	rpn             []interface{}
 }
 
-type OperationTime struct {
-	TimePlus     int
-	TimeMinus    int
-	TimeMultiply int
-	TimeDivide   int
-}
-
-func NewOperationTime() *OperationTime {
-	return &OperationTime{
-		TimePlus:     200,
-		TimeMinus:    200,
-		TimeMultiply: 200,
-		TimeDivide:   200,
+func NewExpression(exp string) (*Expression, error) {
+	expression := &Expression{
+		Exp:          exp,
+		CreationTime: time.Now(),
 	}
+	return expression, expression.parse()
 }
 
 func isDigit(ch uint8) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-func (exp *Expression) Parse() error {
+// parsing to reverse polish notation
+func (exp *Expression) parse() error {
 	st := make([]uint8, 0)
 	var prevChar uint8 = '('
 	bracketsCnt := 0
-	for i := 0; i < len(exp.Input); i++ {
-		ch := exp.Input[i]
+	for i := 0; i < len(exp.Exp); i++ {
+		ch := exp.Exp[i]
 		if isDigit(ch) {
 			if isDigit(prevChar) {
 				err := errors.New("two numbers in a row")
 				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
 			}
-			length := strings.IndexAny(exp.Input[i:], "-+*/() \t")
+			length := strings.IndexAny(exp.Exp[i:], "-+*/() \t")
 			if length == -1 {
-				length = len(exp.Input) - i
+				length = len(exp.Exp) - i
 			}
-			numb, err := strconv.ParseFloat(exp.Input[i:i+length], 64)
+			numb, err := strconv.ParseFloat(exp.Exp[i:i+length], 64)
 			if err != nil {
 				exp.Status = fmt.Sprintf("invalid expression: %v", err)
 				return err
@@ -135,25 +137,26 @@ func (exp *Expression) Parse() error {
 }
 
 func add(a, b float64) float64 {
-	time.Sleep(time.Duration(db.OperationTime.TimePlus) * time.Millisecond)
+	time.Sleep(time.Duration(operationsTime["time_plus"]) * time.Millisecond)
 	return a + b
 }
 
 func minus(a, b float64) float64 {
-	time.Sleep(time.Duration(db.OperationTime.TimeMinus) * time.Millisecond)
+	time.Sleep(time.Duration(operationsTime["time_minus"]) * time.Millisecond)
 	return a - b
 }
 
 func multiply(a, b float64) float64 {
-	time.Sleep(time.Duration(db.OperationTime.TimeMultiply) * time.Millisecond)
+	time.Sleep(time.Duration(operationsTime["time_multiply"]) * time.Millisecond)
 	return a * b
 }
 
 func divide(a, b float64) float64 {
-	time.Sleep(time.Duration(db.OperationTime.TimeDivide) * time.Millisecond)
+	time.Sleep(time.Duration(operationsTime["time_divide"]) * time.Millisecond)
 	return a / b
 }
 
+// calculation from reverse polish notation
 func (exp *Expression) Calculate() {
 	st := make([]float64, 0)
 	for _, v := range exp.rpn {
@@ -184,14 +187,10 @@ func (exp *Expression) Calculate() {
 }
 
 func (exp Expression) String() string {
-	str := fmt.Sprintf("Id: `%s`, Expression: `%s`, Creation date: `%s`, Status: `%s`",
-		exp.Id, exp.Input, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
+	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation date: `%s`, Status: `%s`",
+		exp.Id, exp.Exp, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
 	if exp.Status == "calculated" {
 		str += fmt.Sprintf(",  Result: `%v`, Calculation date: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
 	}
 	return str
-}
-
-func (exp Expression) Contains(id string) bool {
-	return strings.Contains(exp.Id, id)
 }
