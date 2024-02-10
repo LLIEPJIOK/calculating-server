@@ -39,7 +39,11 @@
 
     <div class="page-header d-flex justify-content-between">
         <h3>
+            {{ if eq .SearchId "" }}
             All expressions:
+            {{ else }}
+            Search expressions by id = `{{ .SearchId }}`:
+            {{ end }}
         </h3>
         <div class="col-3 mr-4">
             <form class="d-flex mb-4" role="search">
@@ -50,11 +54,18 @@
     </div>
     <div class="list">
         <ul class="list-group fs-5" id="expression-list">
-            {{ range . }}
+            {{ range .Exps }}
             <li class="list-group-item bg-primary text-white">{{ .String }}</li>
             {{ end }}
         </ul>
     </div>
+    {{ if ne .SearchId "" }}
+    <form class="m-4">
+        <button class="btn btn-primary">
+            <a class="nav-link text-white" href="/list-expressions">All expressions</a>
+        </button>
+    </form>
+    {{ end }}
 </body>
 
 </html>

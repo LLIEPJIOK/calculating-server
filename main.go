@@ -20,7 +20,7 @@ const (
 
 var (
 	db              = expressions.NewDB()
-	expressionsChan = make(chan *expressions.Expression)
+	expressionsChan = make(chan *expressions.Expression, 1000)
 
 	inputExpressionTemplate = template.Must(template.ParseFiles("static/templates/inputExpressionTemplate.html"))
 	inputListTemplate       = template.Must(template.ParseFiles("static/templates/inputListTemplate.html"))
@@ -44,8 +44,15 @@ func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ListExpressionsHandler(w http.ResponseWriter, r *http.Request) {
-	expressions := db.GetExpressionById(r.URL.Query().Get("id"))
-	listExpressionsTemplate.Execute(w, expressions)
+	searchId := r.URL.Query().Get("id")
+	exps := db.GetExpressionById(searchId)
+	listExpressionsTemplate.Execute(w, struct {
+		Exps     []*expressions.Expression
+		SearchId string
+	}{
+		Exps:     exps,
+		SearchId: searchId,
+	})
 }
 
 func ConfigurationHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +109,12 @@ func init() {
 				db.UpdateResult(exp)
 			}
 		}()
+	}
+
+	exps := db.GetUncalculatingExpressions()
+	for _, v := range exps {
+		_ = v.Parse()
+		expressionsChan <- v
 	}
 }
 

@@ -22,6 +22,25 @@ type Database struct {
 	LastInputs []*Expression
 }
 
+func rowsToExpressionsSlice(rows *sql.Rows) []*Expression {
+	var expressions []*Expression
+	for rows.Next() {
+		var exp Expression
+		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
+		if err != nil {
+			log.Println("error in getting data from database:", err)
+			return nil
+		}
+		expressions = append(expressions, &exp)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("error in getting data from database:", err)
+		return nil
+	}
+	return expressions
+}
+
 func createDB() {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
 		host, port, user, password)
@@ -157,33 +176,31 @@ func (db *Database) GetExpressionById(id string) []*Expression {
 	rows, err := db.Query(`
 		SELECT * 
 		FROM "expressions" 
-		WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'`, id)
+		WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'
+		ORDER BY creation_time DESC`, id)
 	if err != nil {
 		log.Fatal("error in getting data from database:", err)
 	}
 	defer rows.Close()
 
-	var expressions []*Expression
-	for rows.Next() {
-		var exp Expression
-		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
-		if err != nil {
-			log.Println("error in getting data from database:", err)
-			return nil
-		}
-		expressions = append(expressions, &exp)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Println("error in getting data from database:", err)
-		return nil
-	}
-
-	return expressions
+	return rowsToExpressionsSlice(rows)
 }
 
 func (*Database) GetOperationTime(op string) int64 {
 	return operationsTime[op]
+}
+
+func (db *Database) GetUncalculatingExpressions() []*Expression {
+	rows, err := db.Query(`
+		SELECT * 
+		FROM "expressions"
+		WHERE status = 'calculating' OR status = 'in queue'`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	return rowsToExpressionsSlice(rows)
 }
 
 func (db *Database) UpdateStatus(exp *Expression) {

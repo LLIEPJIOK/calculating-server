@@ -32,7 +32,7 @@ func NewExpression(exp string) (*Expression, error) {
 		Exp:          exp,
 		CreationTime: time.Now(),
 	}
-	return expression, expression.parse()
+	return expression, expression.Parse()
 }
 
 func isDigit(ch uint8) bool {
@@ -40,7 +40,7 @@ func isDigit(ch uint8) bool {
 }
 
 // parsing to reverse polish notation
-func (exp *Expression) parse() error {
+func (exp *Expression) Parse() error {
 	st := make([]uint8, 0)
 	var prevChar uint8 = '('
 	bracketsCnt := 0
