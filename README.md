@@ -16,7 +16,7 @@ To start working with the server, follow these steps:
 2. Open the `expressions/database.go` file and change the `port` and `password` to match your PostgreSQL port and password.
 3. Type the following command in the console:
    ```bash
-   go run *.go
+   go run main.go
    ```
 4. Open [`localhost:8080`](http://localhost:8080) in your browser.
 
