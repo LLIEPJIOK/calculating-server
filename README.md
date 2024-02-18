@@ -14,11 +14,15 @@ To start working with the server, follow these steps:
    git clone https://github.com/LLIEPJIOK/CalculatingServer.git
    ```
 2. Open the `expressions/database.go` file and change the `port` and `password` to match your PostgreSQL port and password.
-3. Type the following command in the console:
+3. Download required packages:
+   ```bash
+   go mod download
+   ```
+4. Run the program:
    ```bash
    go run main.go
    ```
-4. Open [`localhost:8080`](http://localhost:8080) in your browser.
+5. Open [`localhost:8080`](http://localhost:8080) in your browser.
 
 ## Code structure
 1. `main.go` - file for the server where requests are processed.
@@ -47,5 +51,5 @@ When you send a request (e.g., open the page, submit an expression, etc.), the s
 
 *Note: Currently, there is no automatic updating of data on the page; to see the changes, you must reload the page.*
 
-## Example of usage
-![Example of usage](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/ServerUsage.gif)
+## Usage example
+![Usage example](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/ServerUsage.gif)
