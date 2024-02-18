@@ -6,7 +6,7 @@ The project also utilizes a PostgresSQL database, [Bootstrap](https://getbootstr
 ## Getting started
 To run the server, you need:
 - [Go](https://golang.org/dl) version 1.22 or later.
-- [PostgreSQL](https://postgresql.org/download)
+- [PostgreSQL](https://postgresql.org/download). You may need a VPN to install.
 
 To start working with the server, follow these steps:
 1. Clone the repository:
@@ -14,15 +14,16 @@ To start working with the server, follow these steps:
    git clone https://github.com/LLIEPJIOK/CalculatingServer.git
    ```
 2. Open the `expressions/database.go` file and change the `port` and `password` to match your PostgreSQL port and password.
-3. Download required packages:
-   ```bash
-   go mod download
-   ```
-4. Run the program:
-   ```bash
-   go run main.go
-   ```
-5. Open [`localhost:8080`](http://localhost:8080) in your browser.
+3. Open console in project folder:
+   - Download required packages
+      ```bash
+      go mod download
+      ```
+   - Run the program
+      ```bash
+      go run main.go
+      ```
+4. Open [`localhost:8080`](http://localhost:8080) in your browser.
 
 ## Code structure
 1. `main.go` - file for the server where requests are processed.
@@ -31,15 +32,16 @@ To start working with the server, follow these steps:
 4. `static/` - folder for the visual interface. It contains CSS styles, JS script for clearing the input field after sending an expression, and HTML templates with Bootstrap and HTMX.
 
 ## How it works
-The program consists of a server that handles all requests and agents, which are goroutines responsible for calculating expressions asynchronously.
+The program consists of a server that handles all requests and agents, which are goroutines responsible for calculating expressions asynchronously. Goroutines also update their status (e.g., waiting, calculating, etc.) every 5 seconds if they are waiting for an expression, as well as before and after performing calculations.
 
-When you send a request (e.g., open the page, submit an expression, etc.), the server handles it, and there are several possible scenarios:
+When user send a request (e.g., open the page, submit an expression, etc.), the server handles it, and there are several possible scenarios:
 
 1. **Request to calculate an expression:**
    
-   The server first parses the expression to ensure its validity.
+   The server add expression to database, then parses it to ensure its validity.
    - If the expression is valid, the server conveys it to the agents through a channel. At some point, one agent picks it up, calculates the expression, and then updates the result.
    - If the expression is invalid, the server sets a parsing error in the expression status.
+   After that the server update last expressions.
 
 2. **Request to update the operation calculation time:**
 
@@ -49,7 +51,9 @@ When you send a request (e.g., open the page, submit an expression, etc.), the s
 
    The server retrieves information from the database and displays it.
 
-*Note: Currently, there is no automatic updating of data on the page; to see the changes, you must reload the page.*
+![Working scheme](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/WorkingScheme.png)
+
+*Note: Currently, there is no automatic updating of data on the page. To see the changes, you must reload the page.*
 
 ## Usage example
 ![Usage example](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/ServerUsage.gif)
