@@ -46,6 +46,8 @@ func InputExpressionHandler(w http.ResponseWriter, r *http.Request) {
 func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
 	input := r.PostFormValue("expression")
 	exp, err := expressions.NewExpression(input)
+	db.InsertExpressionInBD(exp)
+
 	if err != nil {
 		exp.Status = err.Error()
 	} else {
@@ -53,7 +55,6 @@ func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
 		expressionsChan <- exp
 	}
 
-	db.InsertExpressionInBD(exp)
 	db.UpdateStatus(exp)
 
 	if err := inputListTemplate.Execute(w, db.LastInputs); err != nil {
