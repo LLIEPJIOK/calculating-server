@@ -87,7 +87,7 @@ func (exp *Expression) Parse() error {
 		} else if strings.Contains(" \t", string(ch)) {
 			continue
 		} else if !strings.Contains("-+*/()", string(ch)) {
-			err := fmt.Errorf("unknown math symbol: %v", ch)
+			err := fmt.Errorf("unknown math symbol: %c", ch)
 			exp.Status = fmt.Sprintf("invalid expression: %v", err)
 			return err
 		} else {
@@ -176,6 +176,10 @@ func (exp *Expression) Calculate() {
 				st[len(st)-2] = multiply(st[len(st)-2], st[len(st)-1])
 				st = st[:len(st)-1]
 			case '/':
+				if st[len(st)-1] == 0 {
+					exp.Status = "invalid expression: division by zero"
+					return
+				}
 				st[len(st)-2] = divide(st[len(st)-2], st[len(st)-1])
 				st = st[:len(st)-1]
 			}

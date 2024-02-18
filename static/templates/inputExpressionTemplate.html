@@ -43,8 +43,7 @@
         <div class="list">
             <ul class="list-group fs-5" id="input-list">
                 {{ range . }}
-                <li class="list-group-item bg-primary text-white">Id: `{{ .Id }}`, Expression: `{{ .Exp }}`, Status:
-                    `{{ .Status }}`</li>
+                <li class="list-group-item bg-primary text-white">{{ .String }}</li>
                 {{ end }}
             </ul>
         </div>

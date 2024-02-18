@@ -2,7 +2,6 @@ package main
 
 import (
 	"calculating-server/expressions"
-	"context"
 	"fmt"
 	"html/template"
 	"log"
@@ -24,12 +23,6 @@ func (ti *ThreadInfo) UpdateStatus(newStatus string) {
 	ti.LastPing = time.Now()
 }
 
-type ExpressionKey string
-
-const (
-	keyExpression ExpressionKey = "expression"
-)
-
 var (
 	numberOfThreads = 10
 	db              = expressions.NewDB()
@@ -44,34 +37,51 @@ var (
 )
 
 func InputExpressionHandler(w http.ResponseWriter, r *http.Request) {
-	inputExpressionTemplate.Execute(w, db.LastInputs)
+	if err := inputExpressionTemplate.Execute(w, db.LastInputs); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
 
 func AddExpressionHandler(w http.ResponseWriter, r *http.Request) {
-	exp, ok := r.Context().Value(keyExpression).(*expressions.Expression)
-	if !ok {
-		http.Error(w, "expression not found in context", http.StatusInternalServerError)
+	input := r.PostFormValue("expression")
+	exp, err := expressions.NewExpression(input)
+	if err != nil {
+		exp.Status = err.Error()
+	} else {
+		exp.Status = "in queue"
+		expressionsChan <- exp
+	}
+
+	db.InsertExpressionInBD(exp)
+	db.UpdateStatus(exp)
+
+	if err := inputListTemplate.Execute(w, db.LastInputs); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	db.InsertExpressionInBD(exp)
-	expressionsChan <- exp
-	exp.Status = "in queue"
 }
 
 func ListExpressionsHandler(w http.ResponseWriter, r *http.Request) {
 	searchId := r.URL.Query().Get("id")
 	exps := db.GetExpressionById(searchId)
-	listExpressionsTemplate.Execute(w, struct {
+	if err := listExpressionsTemplate.Execute(w, struct {
 		Exps     []*expressions.Expression
 		SearchId string
 	}{
 		Exps:     exps,
 		SearchId: searchId,
-	})
+	}); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
 
 func ConfigurationHandler(w http.ResponseWriter, r *http.Request) {
-	configurationTemplate.Execute(w, db)
+	if err := configurationTemplate.Execute(w, db); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
 
 func ChangeConfigurationHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +94,10 @@ func ChangeConfigurationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ComputingResourcesHandler(w http.ResponseWriter, r *http.Request) {
-	computingResourcesTemplate.Execute(w, threadInfos)
+	if err := computingResourcesTemplate.Execute(w, threadInfos); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 }
 
 func RecoverMiddleware(next http.Handler) http.Handler {
@@ -96,22 +109,6 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 			}
 		}()
 		next.ServeHTTP(w, r)
-	})
-}
-
-func ParsingMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		input := r.PostFormValue("expression")
-		exp, err := expressions.NewExpression(input)
-		if err != nil {
-			exp.Status = err.Error()
-		} else {
-			ctx := context.WithValue(r.Context(), keyExpression, exp)
-			r = r.WithContext(ctx)
-			next.ServeHTTP(w, r)
-		}
-		db.UpdateStatus(exp)
-		inputListTemplate.Execute(w, db.LastInputs)
 	})
 }
 
@@ -165,12 +162,11 @@ func main() {
 	r := mux.NewRouter()
 	r.Use(RecoverMiddleware)
 	r.HandleFunc("/", InputExpressionHandler).Methods("GET")
-	r.HandleFunc("/add-expression", ParsingMiddleware(AddExpressionHandler)).Methods("POST")
+	r.HandleFunc("/add-expression", AddExpressionHandler).Methods("POST")
 	r.HandleFunc("/list-expressions", ListExpressionsHandler).Methods("GET")
 	r.HandleFunc("/configuration", ConfigurationHandler).Methods("GET")
 	r.HandleFunc("/configuration/change", ChangeConfigurationHandler).Methods("PUT")
 	r.HandleFunc("/computing-resources", ComputingResourcesHandler).Methods("GET")
-	// r.HandleFunc("/computing-resources/change", ComputingResourcesHandler).Methods("GET")
 
 	fs := http.FileServer(http.Dir("static"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static", fs))

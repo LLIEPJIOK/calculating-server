@@ -173,11 +173,20 @@ func (db *Database) InsertExpressionInBD(exp *Expression) {
 }
 
 func (db *Database) GetExpressionById(id string) []*Expression {
-	rows, err := db.Query(`
-		SELECT * 
-		FROM "expressions" 
-		WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'
-		ORDER BY creation_time DESC`, id)
+	var rows *sql.Rows
+	var err error
+	if id == "" {
+		rows, err = db.Query(`
+			SELECT * 
+			FROM "expressions" 
+			ORDER BY id DESC`)
+	} else {
+		rows, err = db.Query(`
+			SELECT * 
+			FROM "expressions" 
+			WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'
+			ORDER BY id ASC`, id)
+	}
 	if err != nil {
 		log.Fatal("error in getting data from database:", err)
 	}
