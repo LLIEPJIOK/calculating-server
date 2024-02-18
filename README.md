@@ -1,7 +1,7 @@
 ## About CalculationServer
 CalculationServer is a server that calculates expressions within a specified operation calculation time.
 
-The project also utilizes a PostgresSQL database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
+The project also utilizes a [PostgresSQL](https://www.postgresql.org) database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
 
 ## Getting started
 To run the server, you need:
