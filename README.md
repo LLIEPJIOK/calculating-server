@@ -48,4 +48,4 @@ When you send a request (e.g., open the page, submit an expression, etc.), the s
 *Note: Currently, there is no automatic updating of data on the page; to see the changes, you must reload the page.*
 
 ## Example of usage
-![Example of usage](https://github.com/LLIEPJIOK/CalculatingServer/tree/master/images/ServerUsage.gif)
+![Example of usage](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/ServerUsage.gif)
