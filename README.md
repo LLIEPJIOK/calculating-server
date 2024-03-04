@@ -4,7 +4,7 @@ Read this in other languages: [Russian](https://github.com/LLIEPJIOK/Calculating
 
 CalculationServer is a server that calculates expressions within a specified operation calculation time.
 
-The project also utilizes a PostgresSQL database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
+The project also utilizes a [PostgresSQL](https://www.postgresql.org) database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
 
 ## Getting started
 To run the server, you need:
@@ -44,6 +44,7 @@ When user send a request (e.g., open the page, submit an expression, etc.), the 
    The server add expression to database, then parses it to ensure its validity.
    - If the expression is valid, the server conveys it to the agents through a channel. At some point, one agent picks it up, calculates the expression, and then updates the result.
    - If the expression is invalid, the server sets a parsing error in the expression status.
+   
    After that the server update last expressions.
 
 2. **Request to update the operation calculation time:**
