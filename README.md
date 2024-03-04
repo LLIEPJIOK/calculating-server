@@ -1,4 +1,7 @@
 ## About CalculationServer
+
+Read this in other languages: [Russian](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/README.ru.md).
+
 CalculationServer is a server that calculates expressions within a specified operation calculation time.
 
 The project also utilizes a PostgresSQL database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
