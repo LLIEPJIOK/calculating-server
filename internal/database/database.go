@@ -1,10 +1,11 @@
-package expressions
+package database
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
 
+	"github.com/LLIEPJIOK/calculating-server/internal/expression"
 	_ "github.com/lib/pq"
 )
 
@@ -17,15 +18,14 @@ const (
 	OperationTimeDB  = "operation_time_db"
 )
 
-type Database struct {
-	*sql.DB
-	LastInputs []*Expression
-}
+var (
+	dataBase *sql.DB
+)
 
-func rowsToExpressionsSlice(rows *sql.Rows) []*Expression {
-	var expressions []*Expression
+func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression {
+	var expressions []*expression.Expression
 	for rows.Next() {
-		var exp Expression
+		var exp expression.Expression
 		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
 		if err != nil {
 			log.Println("error in getting data from database:", err)
@@ -71,8 +71,8 @@ func createDB() {
 	}
 }
 
-func (db *Database) createTables() {
-	_, err := db.Exec(`
+func createTables() {
+	_, err := dataBase.Exec(`
 		CREATE TABLE IF NOT EXISTS "expressions" (
 			id SERIAL PRIMARY KEY,
 			exp CHARACTER VARYING,
@@ -86,7 +86,7 @@ func (db *Database) createTables() {
 	}
 
 	var exists bool
-	err = db.QueryRow(`
+	err = dataBase.QueryRow(`
 		SELECT EXISTS (
 			SELECT 1
 			FROM information_schema.tables
@@ -97,7 +97,7 @@ func (db *Database) createTables() {
 	}
 
 	if !exists {
-		_, err = db.Exec(`
+		_, err = dataBase.Exec(`
 		CREATE TABLE "operations_time" (
 			key CHARACTER VARYING PRIMARY KEY,
 			value INT
@@ -107,11 +107,11 @@ func (db *Database) createTables() {
 		}
 	}
 
-	rows, err := db.Query(`
+	rows, err := dataBase.Query(`
 		SELECT * 
 		FROM "operations_time"`)
 	if err != nil {
-		log.Fatal("error getting data from db:", err)
+		log.Fatal("error getting data from database:", err)
 	}
 
 	for rows.Next() {
@@ -121,15 +121,15 @@ func (db *Database) createTables() {
 		if err != nil {
 			log.Fatal("error in getting data from database:", err)
 		}
-		operationsTime[key] = val
+		expression.SetOperationTime(key, val)
 	}
 	if err := rows.Err(); err != nil {
 		log.Fatal("error in getting data from database:", err)
 	}
 
-	for key, val := range operationsTime {
+	for key, val := range expression.GetOperationTimes() {
 		var exists bool
-		err := db.QueryRow(`
+		err := dataBase.QueryRow(`
 		SELECT EXISTS (
 			SELECT 1
 			FROM "operations_time"
@@ -140,7 +140,7 @@ func (db *Database) createTables() {
 		}
 
 		if !exists {
-			_, err := db.Exec(`
+			_, err := dataBase.Exec(`
 			INSERT INTO "operations_time"(key, value)
 			VALUES ($1, $2)`,
 				key, val)
@@ -151,8 +151,8 @@ func (db *Database) createTables() {
 	}
 }
 
-func (db *Database) InsertExpressionInBD(exp *Expression) {
-	_, err := db.Exec(`
+func InsertExpressionInBD(exp *expression.Expression) {
+	_, err := dataBase.Exec(`
 		INSERT INTO "expressions"(exp, result, status, creation_time, calculation_time) 
 		VALUES($1, $2, $3, $4, $5)`,
 		exp.Exp, exp.Result, exp.Status, exp.CreationTime, exp.CalculationTime)
@@ -161,27 +161,22 @@ func (db *Database) InsertExpressionInBD(exp *Expression) {
 		return
 	}
 
-	err = db.QueryRow(`SELECT LASTVAL()`).Scan(&exp.Id)
+	err = dataBase.QueryRow(`SELECT LASTVAL()`).Scan(&exp.Id)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	db.LastInputs = append([]*Expression{exp}, db.LastInputs...)
-	if len(db.LastInputs) >= 11 {
-		db.LastInputs = db.LastInputs[:10]
-	}
 }
 
-func (db *Database) GetExpressionById(id string) []*Expression {
+func GetExpressionById(id string) []*expression.Expression {
 	var rows *sql.Rows
 	var err error
 	if id == "" {
-		rows, err = db.Query(`
+		rows, err = dataBase.Query(`
 			SELECT * 
 			FROM "expressions" 
 			ORDER BY id DESC`)
 	} else {
-		rows, err = db.Query(`
+		rows, err = dataBase.Query(`
 			SELECT * 
 			FROM "expressions" 
 			WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'
@@ -195,12 +190,8 @@ func (db *Database) GetExpressionById(id string) []*Expression {
 	return rowsToExpressionsSlice(rows)
 }
 
-func (*Database) GetOperationTime(op string) int64 {
-	return operationsTime[op]
-}
-
-func (db *Database) GetUncalculatingExpressions() []*Expression {
-	rows, err := db.Query(`
+func GetUncalculatingExpressions() []*expression.Expression {
+	rows, err := dataBase.Query(`
 		SELECT * 
 		FROM "expressions"
 		WHERE status = 'calculating' OR status = 'in queue'`)
@@ -212,8 +203,8 @@ func (db *Database) GetUncalculatingExpressions() []*Expression {
 	return rowsToExpressionsSlice(rows)
 }
 
-func (db *Database) UpdateStatus(exp *Expression) {
-	_, err := db.Exec(`
+func UpdateStatus(exp *expression.Expression) {
+	_, err := dataBase.Exec(`
 		UPDATE "expressions" 
 		SET status = $1 
 		WHERE id = $2`,
@@ -223,8 +214,8 @@ func (db *Database) UpdateStatus(exp *Expression) {
 	}
 }
 
-func (db *Database) UpdateResult(exp *Expression) {
-	_, err := db.Exec(`
+func UpdateResult(exp *expression.Expression) {
+	_, err := dataBase.Exec(`
 		UPDATE "expressions" 
 		SET result = $1 
 		WHERE id = $2`,
@@ -233,7 +224,7 @@ func (db *Database) UpdateResult(exp *Expression) {
 		log.Printf("error in setting %#v in database: %v\n", *exp, err)
 	}
 
-	_, err = db.Exec(`
+	_, err = dataBase.Exec(`
 		UPDATE "expressions" 
 		SET calculation_time = $1 
 		WHERE id = $2`,
@@ -243,14 +234,11 @@ func (db *Database) UpdateResult(exp *Expression) {
 	}
 }
 
-func (db *Database) UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide int64) {
-	operationsTime["time_plus"] = timePlus
-	operationsTime["time_minus"] = timeMinus
-	operationsTime["time_multiply"] = timeMultiply
-	operationsTime["time_divide"] = timeDivide
+func UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide int64) {
+	expression.UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide)
 
-	for key, val := range operationsTime {
-		_, err := db.Exec(`
+	for key, val := range expression.GetOperationTimes() {
+		_, err := dataBase.Exec(`
 			UPDATE "operations_time"
 			SET value = $2
 			WHERE key = $1`,
@@ -261,44 +249,49 @@ func (db *Database) UpdateOperationsTime(timePlus, timeMinus, timeMultiply, time
 	}
 }
 
-func (db *Database) LoadLastExpressions(count int) {
-	rows, err := db.Query("SELECT * FROM \"expressions\" ORDER BY creation_time DESC LIMIT $1", count)
+func GetLastExpressions() []*expression.Expression {
+	rows, err := dataBase.Query("SELECT * FROM \"expressions\" ORDER BY creation_time DESC LIMIT 10")
 	if err != nil {
-		log.Fatal("error in getting data from database:", err)
+		log.Println("error in getting data from database:", err)
+		return nil
 	}
 	defer rows.Close()
 
-	db.LastInputs = make([]*Expression, 0)
+	lastInputs := make([]*expression.Expression, 0, 10)
 	for rows.Next() {
-		var exp Expression
+		var exp expression.Expression
 		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
 		if err != nil {
-			log.Fatal("error in getting data from database:", err)
+			log.Println("error in getting data from database:", err)
+			return nil
 		}
-		db.LastInputs = append(db.LastInputs, &exp)
+		lastInputs = append(lastInputs, &exp)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal("error in getting data from database:", err)
+		log.Println("error in getting data from database:", err)
+		return nil
 	}
+	return lastInputs
 }
 
-func NewDB() *Database {
-	db := &Database{}
+func Close() {
+	dataBase.Close()
+}
+
+func init() {
 	createDB()
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, ExpressionDBName)
 	var err error
-	db.DB, err = sql.Open("postgres", connStr)
+	dataBase, err = sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatal("error open database:", err)
 	}
-	if err = db.Ping(); err != nil {
+	if err = dataBase.Ping(); err != nil {
 		log.Fatal("error connecting to database:", err)
 	}
 
-	db.createTables()
-	db.LoadLastExpressions(10)
-	return db
+	createTables()
 }

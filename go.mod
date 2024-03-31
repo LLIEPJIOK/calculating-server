@@ -1,4 +1,4 @@
-module calculating-server
+module github.com/LLIEPJIOK/calculating-server
 
 go 1.22.0
 

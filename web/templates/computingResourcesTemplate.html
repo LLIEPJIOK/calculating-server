@@ -43,7 +43,7 @@
         <ul class="list-group fs-5" id="resources-list">
             {{ range . }}
             <li class="list-group-item bg-primary text-white">
-                Agent #{{ .Id }}: {{ .Status }}. Last ping: {{ .LastPing.Format "2006-01-02 15:04:05" }}
+                {{ .String }}
             </li>
             {{ end }}
         </ul>

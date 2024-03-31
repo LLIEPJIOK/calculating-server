@@ -1,4 +1,4 @@
-package expressions
+package expression
 
 import (
 	"errors"
@@ -6,15 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-)
-
-var (
-	operationsTime = map[string]int64{
-		"time_plus":     200,
-		"time_minus":    200,
-		"time_multiply": 200,
-		"time_divide":   200,
-	}
 )
 
 type Expression struct {
@@ -27,8 +18,8 @@ type Expression struct {
 	rpn             []interface{}
 }
 
-func NewExpression(exp string) (*Expression, error) {
-	expression := &Expression{
+func NewExpression(exp string) (Expression, error) {
+	expression := Expression{
 		Exp:          exp,
 		CreationTime: time.Now(),
 	}
@@ -136,26 +127,6 @@ func (exp *Expression) Parse() error {
 	return nil
 }
 
-func add(a, b float64) float64 {
-	time.Sleep(time.Duration(operationsTime["time_plus"]) * time.Millisecond)
-	return a + b
-}
-
-func minus(a, b float64) float64 {
-	time.Sleep(time.Duration(operationsTime["time_minus"]) * time.Millisecond)
-	return a - b
-}
-
-func multiply(a, b float64) float64 {
-	time.Sleep(time.Duration(operationsTime["time_multiply"]) * time.Millisecond)
-	return a * b
-}
-
-func divide(a, b float64) float64 {
-	time.Sleep(time.Duration(operationsTime["time_divide"]) * time.Millisecond)
-	return a / b
-}
-
 // calculation from reverse polish notation
 func (exp *Expression) Calculate() {
 	st := make([]float64, 0)
@@ -191,10 +162,10 @@ func (exp *Expression) Calculate() {
 }
 
 func (exp Expression) String() string {
-	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation date: `%s`, Status: `%s`",
+	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation time: `%s`, Status: `%s`",
 		exp.Id, exp.Exp, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
 	if exp.Status == "calculated" {
-		str += fmt.Sprintf(",  Result: `%v`, Calculation date: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
+		str += fmt.Sprintf(",  Result: `%v`, Calculation time: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
 	}
 	return str
 }
