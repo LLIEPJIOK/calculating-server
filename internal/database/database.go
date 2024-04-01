@@ -6,13 +6,14 @@ import (
 	"log"
 
 	"github.com/LLIEPJIOK/calculating-server/internal/expression"
+	"github.com/LLIEPJIOK/calculating-server/internal/user"
 	_ "github.com/lib/pq"
 )
 
 const (
 	host             = "localhost"
 	port             = 5432
-	user             = "postgres"
+	databaseUser     = "postgres"
 	password         = "123409874567"
 	ExpressionDBName = "expressions_db"
 	OperationTimeDB  = "operation_time_db"
@@ -41,9 +42,9 @@ func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression {
 	return expressions
 }
 
-func createDB() {
+func createDatabaseIfNotExists() {
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
-		host, port, user, password)
+		host, port, databaseUser, password)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("error open database:", err)
@@ -71,7 +72,7 @@ func createDB() {
 	}
 }
 
-func createTables() {
+func createExpressionsTableIfNotExists() {
 	_, err := dataBase.Exec(`
 		CREATE TABLE IF NOT EXISTS "expressions" (
 			id SERIAL PRIMARY KEY,
@@ -84,29 +85,49 @@ func createTables() {
 	if err != nil {
 		log.Fatal("error creating expressions table:", err)
 	}
+}
 
-	var exists bool
-	err = dataBase.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM information_schema.tables
-			WHERE table_name = 'operations_time'
-		)`).Scan(&exists)
-	if err != nil {
-		log.Fatal("error getting information from database:", err)
-	}
-
-	if !exists {
-		_, err = dataBase.Exec(`
-		CREATE TABLE "operations_time" (
+func createOperationTimeTableIfNotExists() {
+	_, err := dataBase.Exec(`
+		CREATE TABLE IF NOT EXISTS "operations_time" (
 			key CHARACTER VARYING PRIMARY KEY,
 			value INT
 		)`)
-		if err != nil {
-			log.Fatal("error creating expressions table:", err)
-		}
+	if err != nil {
+		log.Fatal("error creating expressions table:", err)
 	}
+}
 
+func createUsersTableIfNotExists() {
+	_, err := dataBase.Exec(`
+		CREATE TABLE IF NOT EXISTS "users" (
+			login VARCHAR(100) PRIMARY KEY,
+			name VARCHAR(100) NOT NULL,
+			hash_password VARCHAR(100) NOT NULL
+		)`)
+	if err != nil {
+		log.Fatal("error creating users table:", err)
+	}
+}
+
+func InsertUserInDatabase(insertingUser *user.User) {
+	_, err := dataBase.Exec(`
+		INSERT INTO "users"(login, name, hash_password) 
+		VALUES($1, $2, $3)`,
+		insertingUser.Login, insertingUser.Name, insertingUser.HashPassword)
+	if err != nil {
+		log.Printf("error in insert %#v in database: %v\n", *insertingUser, err)
+		return
+	}
+}
+
+func createTablesIfNotExists() {
+	createExpressionsTableIfNotExists()
+	createOperationTimeTableIfNotExists()
+	createUsersTableIfNotExists()
+}
+
+func GetOperationTimesFromDatabase() map[string]int64 {
 	rows, err := dataBase.Query(`
 		SELECT * 
 		FROM "operations_time"`)
@@ -114,6 +135,7 @@ func createTables() {
 		log.Fatal("error getting data from database:", err)
 	}
 
+	operationTimes := make(map[string]int64)
 	for rows.Next() {
 		var key string
 		var val int64
@@ -121,34 +143,12 @@ func createTables() {
 		if err != nil {
 			log.Fatal("error in getting data from database:", err)
 		}
-		expression.SetOperationTime(key, val)
+		operationTimes[key] = val
 	}
 	if err := rows.Err(); err != nil {
 		log.Fatal("error in getting data from database:", err)
 	}
-
-	for key, val := range expression.GetOperationTimes() {
-		var exists bool
-		err := dataBase.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM "operations_time"
-			WHERE key = $1
-		)`, key).Scan(&exists)
-		if err != nil {
-			log.Fatal("error checking record existence:", err)
-		}
-
-		if !exists {
-			_, err := dataBase.Exec(`
-			INSERT INTO "operations_time"(key, value)
-			VALUES ($1, $2)`,
-				key, val)
-			if err != nil {
-				log.Fatal("error inserting record:", err)
-			}
-		}
-	}
+	return operationTimes
 }
 
 func InsertExpressionInBD(exp *expression.Expression) {
@@ -279,11 +279,11 @@ func Close() {
 	dataBase.Close()
 }
 
-func init() {
-	createDB()
+func Configure() {
+	createDatabaseIfNotExists()
 
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, ExpressionDBName)
+		host, port, databaseUser, password, ExpressionDBName)
 	var err error
 	dataBase, err = sql.Open("postgres", connectionString)
 	if err != nil {
@@ -293,5 +293,5 @@ func init() {
 		log.Fatal("error connecting to database:", err)
 	}
 
-	createTables()
+	createTablesIfNotExists()
 }

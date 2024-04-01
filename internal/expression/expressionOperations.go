@@ -49,3 +49,9 @@ func divide(a, b float64) float64 {
 	time.Sleep(time.Duration(operationTimes["time_divide"]) * time.Millisecond)
 	return a / b
 }
+
+func UpdateOperationTimes(newOperationTimes map[string]int64) {
+	for operation, time := range newOperationTimes {
+		operationTimes[operation] = time
+	}
+}

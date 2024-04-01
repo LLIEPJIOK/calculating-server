@@ -25,3 +25,7 @@ li {
     width: 60vw;
     margin: 0px 23px 23px 23px;
 }
+
+.login-area {
+    height: 100vh;
+}

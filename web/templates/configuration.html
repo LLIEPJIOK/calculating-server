@@ -40,22 +40,22 @@
             <form hx-put="/configuration/change" hx-swap="none">
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
-                    <input type="number" name="time-plus" class="form-control exp-input" min="0" 
+                    <input type="number" name="time-plus" class="form-control" min="0" 
                         value="{{ GetOperationTime "time_plus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-minus">- execution time (ms)</label>
-                    <input type="number" name="time-minus" class="form-control exp-input" min="0" 
+                    <input type="number" name="time-minus" class="form-control" min="0" 
                         value="{{ GetOperationTime "time_minus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-multiply">* execution time (ms)</label>
-                    <input type="number" name="time-multiply" class="form-control exp-input" min="0" 
+                    <input type="number" name="time-multiply" class="form-control" min="0" 
                         value="{{ GetOperationTime "time_multiply" }}" />
                 </div>
                 <div class=" mb-3">
                     <label for="time-divide">/ execution time (ms)</label>
-                    <input type="number" name="time-divide" class="form-control exp-input" min="0"
+                    <input type="number" name="time-divide" class="form-control" min="0"
                         value="{{ GetOperationTime "time_divide" }}" />
                 </div>
                 <div class="d-flex justify-content-center">
