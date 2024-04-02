@@ -50,12 +50,12 @@ func (threadInfo *Worker) Run() {
 
 			threadInfo.UpdateStatus(fmt.Sprintf("Calculation expression #%v", exp.Id))
 			exp.Status = "calculating"
-			database.UpdateStatus(&exp)
+			database.UpdateExpressionStatus(&exp)
 
 			exp.Calculate()
 
-			database.UpdateStatus(&exp)
-			database.UpdateResult(&exp)
+			database.UpdateExpressionStatus(&exp)
+			database.UpdateExpressionResult(&exp)
 			threadInfo.UpdateStatus("Waiting for expression")
 		}
 	}
