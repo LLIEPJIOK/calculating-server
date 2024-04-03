@@ -1,9 +1,6 @@
 package controllers
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,8 +19,7 @@ import (
 type userContextKey string
 
 const (
-	secretString                 = "super_secret_string"
-	keyUserString userContextKey = "user"
+	secretString = "super_secret_string"
 )
 
 var (
@@ -31,110 +27,17 @@ var (
 		"GetOperationTime": expression.GetOperationTime,
 	}
 
-	loginTemplate              = template.Must(template.ParseFiles("web/templates/login.html"))
-	registerTemplate           = template.Must(template.ParseFiles("web/templates/register.html"))
-	invalidLoginRegister       = template.Must(template.ParseFiles("web/templates/invalidLoginRegister.html"))
-	inputExpressionTemplate    = template.Must(template.ParseFiles("web/templates/inputExpression.html"))
-	inputListTemplate          = template.Must(template.ParseFiles("web/templates/inputList.html"))
-	listExpressionsTemplate    = template.Must(template.ParseFiles("web/templates/listExpressions.html"))
-	configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("web/templates/configuration.html"))
-	computingResourcesTemplate = template.Must(template.ParseFiles("web/templates/computingResources.html"))
+	loginTemplate              = template.Must(template.ParseFiles("static/templates/logIn.html"))
+	registerTemplate           = template.Must(template.ParseFiles("static/templates/register.html"))
+	invalidLoginRegister       = template.Must(template.ParseFiles("static/templates/invalidLoginRegister.html"))
+	inputExpressionTemplate    = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
+	inputListTemplate          = template.Must(template.ParseFiles("static/templates/inputList.html"))
+	listExpressionsTemplate    = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
+	configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
+	computingResourcesTemplate = template.Must(template.ParseFiles("static/templates/computingResources.html"))
 )
 
-func CheckingTokenMiddleWare(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		cookie, err := request.Cookie("Authorization")
-		if errors.Is(http.ErrNoCookie, err) {
-			fmt.Println("op")
-			next.ServeHTTP(writer, request)
-			return
-		}
-		if err != nil {
-			log.Printf("getting cookie error: %v\n", err)
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		tokenString := cookie.Value
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-
-			return []byte(secretString), nil
-		})
-		if err != nil {
-			log.Printf("error parsing token: %v\n", err)
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		if !token.Valid {
-			log.Printf("token is invalid: %#v\n", token)
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			log.Println("cannot cast token claim to MapClaims")
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			log.Println("token is expired")
-			next.ServeHTTP(writer, request)
-			return
-		}
-		ctx := context.WithValue(request.Context(), keyUserString, database.GetUserByLogin(claims["login"].(string)))
-		http.Redirect(writer, request.WithContext(ctx), "http://localhost:8081/input-expression", http.StatusSeeOther)
-	})
-
-}
-
-func RecoverMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				http.Error(writer, fmt.Sprintf("panic: %v", err), http.StatusInternalServerError)
-				log.Println("recovering from panic:", err)
-			}
-		}()
-		next.ServeHTTP(writer, request)
-	})
-}
-
-func LoginHandler(writer http.ResponseWriter, request *http.Request) {
-	if err := loginTemplate.Execute(writer, nil); err != nil {
-		log.Printf("loginTemplate error: %v\n", err)
-		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-}
-
-func RegisterHandler(writer http.ResponseWriter, request *http.Request) {
-	fmt.Println("op")
-	if err := registerTemplate.Execute(writer, nil); err != nil {
-		log.Printf("registerTemplate error: %v\n", err)
-		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-}
-
-func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Request) {
-	name := request.PostFormValue("name")
-	login := request.PostFormValue("login")
-	password := request.PostFormValue("password")
-
-	checkingUser := database.GetUserByLogin(login)
-	if checkingUser.Login != "" {
-		invalidLoginRegister.Execute(writer, nil)
-		return
-	}
-	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	if err != nil {
-		log.Printf("error while hashing password: %v\n", err)
-	}
-
-	database.InsertUserInDatabase(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
+func generateAndReturnToken(writer http.ResponseWriter, login string) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"login": login,
 		"nbf":   time.Now().Unix(),
@@ -157,6 +60,55 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 		Secure:   true,
 		SameSite: http.SameSiteDefaultMode,
 	})
+}
+
+func LogInHandler(writer http.ResponseWriter, request *http.Request) {
+	if err := loginTemplate.Execute(writer, nil); err != nil {
+		log.Printf("loginTemplate error: %v\n", err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
+func ConfirmLogInHandler(writer http.ResponseWriter, request *http.Request) {
+	login := request.PostFormValue("login")
+	password := request.PostFormValue("password")
+
+	checkingUser := database.GetUserByLogin(login)
+	if err := bcrypt.CompareHashAndPassword([]byte(checkingUser.HashPassword), []byte(password)); err != nil {
+		// TODO: write incorrect login or password response
+		return
+	}
+
+	generateAndReturnToken(writer, login)
+}
+
+func RegisterHandler(writer http.ResponseWriter, request *http.Request) {
+	if err := registerTemplate.Execute(writer, nil); err != nil {
+		log.Printf("registerTemplate error: %v\n", err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
+func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Request) {
+	name := request.PostFormValue("name")
+	login := request.PostFormValue("login")
+	password := request.PostFormValue("password")
+
+	checkingUser := database.GetUserByLogin(login)
+	if checkingUser.Login != "" {
+		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+		invalidLoginRegister.Execute(writer, nil)
+		return
+	}
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		log.Printf("error while hashing password: %v\n", err)
+	}
+
+	database.InsertUserInDatabase(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
+	generateAndReturnToken(writer, login)
 }
 
 func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
@@ -231,19 +183,20 @@ func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request
 
 func ConfigureControllers(router *mux.Router) {
 	router.Use(RecoverMiddleware)
-	router.HandleFunc("/", LoginHandler).Methods("GET")
-	router.HandleFunc("/register", CheckingTokenMiddleWare(RegisterHandler)).Methods("GET")
+	router.HandleFunc("/", CheckingTokenBeforeLoginMiddleWare(LogInHandler)).Methods("GET")
+	router.HandleFunc("/login/confirm", ConfirmLogInHandler).Methods("POST")
+	router.HandleFunc("/register", CheckingTokenBeforeLoginMiddleWare(RegisterHandler)).Methods("GET")
 	router.HandleFunc("/register/confirm", ConfirmRegistrationHandler).Methods("POST")
-	router.HandleFunc("/input-expression", InputExpressionHandler).Methods("GET")
+	router.HandleFunc("/input-expression", CheckingTokenAfterLoginMiddleWare(InputExpressionHandler)).Methods("GET")
 	router.HandleFunc("/add-expression", AddExpressionHandler).Methods("POST")
-	router.HandleFunc("/list-expressions", ListExpressionsHandler).Methods("GET")
-	router.HandleFunc("/configuration", ConfigurationHandler).Methods("GET")
+	router.HandleFunc("/list-expressions", CheckingTokenAfterLoginMiddleWare(ListExpressionsHandler)).Methods("GET")
+	router.HandleFunc("/configuration", CheckingTokenAfterLoginMiddleWare(ConfigurationHandler)).Methods("GET")
 	router.HandleFunc("/configuration/change", ChangeConfigurationHandler).Methods("PUT")
-	router.HandleFunc("/computing-resources", ComputingResourcesHandler).Methods("GET")
+	router.HandleFunc("/computing-resources", CheckingTokenAfterLoginMiddleWare(ComputingResourcesHandler)).Methods("GET")
 
-	fileServer := http.FileServer(http.Dir("./web/static"))
+	fileServer := http.FileServer(http.Dir("./static"))
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static", fileServer))
 
 	log.Println("Starting server at port :8080")
-	log.Fatal(http.ListenAndServe(":8081", router))
+	log.Fatal(http.ListenAndServe(":8080", router))
 }

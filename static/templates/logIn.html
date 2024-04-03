@@ -16,15 +16,11 @@
     <div class="d-flex flex-column justify-content-center align-items-center login-area" id="input-block">
         <div class="rounded-3 p-4 bg-primary text-white input-block">
             <h4 class="d-flex justify-content-center fs-24">
-                Register
+                Login
             </h4>
-            <form hx-post="/register/confirm" hx-swap="innerHTML">
+            <form hx-post="/login/confirm" hx-swap="none">
                 <div class="mb-2">
-                    <label for="name">Name</label>
-                    <input type="text" name="name" class="form-control" value="" />
-                </div>
-                <div class="mb-2">
-                    <label for="login">Login</label>
+                    <label for="login">Log In</label>
                     <input type="text" name="login" class="form-control" value="" />
                 </div>
                 <div class="mb-2">
@@ -32,18 +28,17 @@
                     <input type="text" name="password" class="form-control" value="" />
                 </div>
                 <div class="d-flex justify-content-center">
-                    <button type="submit" class="btn btn-outline-light btn-submit-input">Register</button>
+                    <button type="submit" class="btn btn-outline-light btn-submit-input">Login</button>
                 </div>
             </form>
+            <div class="d-flex justify-content-center mt-4">
+                Don't have an account?<a href="/register" class="text-white ms-2">Register</a>
+            </div>
         </div>
     </div>
-    <script>
-        // Add an event listener for htmx:afterRequest event
-        document.body.addEventListener('htmx:afterRequest', function (event) {
-            // Reload the page after the HTMX request completes
-            window.location.reload();
-        });
-    </script>
+
+    <script src="/static/scripts/reloadPage.js"></script>
+
 </body>
 
 </html>
