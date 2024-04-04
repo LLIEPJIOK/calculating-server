@@ -19,7 +19,7 @@ func createUsersTableIfNotExists() {
 	}
 }
 
-func InsertUserInDatabase(insertingUser *user.User) {
+func InsertUser(insertingUser *user.User) {
 	_, err := dataBase.Exec(`
 		INSERT INTO "users"(login, name, hash_password) 
 		VALUES($1, $2, $3)`,

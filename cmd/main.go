@@ -11,7 +11,8 @@ import (
 func init() {
 	database.Configure()
 	workers.Initialize()
-	expression.UpdateOperationTimes(database.GetOperationTimesFromDatabase())
+	expression.UpdateOperationTimesMap(database.GetOperationTimes())
+	database.InsertOperationTimes(expression.GetOperationTimes())
 }
 
 func main() {

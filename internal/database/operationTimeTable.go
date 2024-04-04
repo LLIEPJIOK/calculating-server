@@ -18,7 +18,7 @@ func createOperationTimeTableIfNotExists() {
 	}
 }
 
-func GetOperationTimesFromDatabase() map[string]int64 {
+func GetOperationTimes() map[string]int64 {
 	rows, err := dataBase.Query(`
 		SELECT * 
 		FROM "operations_time"`)
@@ -42,8 +42,33 @@ func GetOperationTimesFromDatabase() map[string]int64 {
 	return operationTimes
 }
 
-func UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide int64) {
-	expression.UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide)
+func InsertOperationTimes(operationTimes map[string]int64) {
+	for key, val := range operationTimes {
+		var exists bool
+		err := dataBase.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM "operations_time"
+			WHERE key = $1
+		)`, key).Scan(&exists)
+		if err != nil {
+			log.Fatal("error checking record existence:", err)
+		}
+
+		if !exists {
+			_, err := dataBase.Exec(`
+			INSERT INTO "operations_time"(key, value)
+			VALUES ($1, $2)`,
+				key, val)
+			if err != nil {
+				log.Fatal("error inserting record:", err)
+			}
+		}
+	}
+}
+
+func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide int64) {
+	expression.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide)
 
 	for key, val := range expression.GetOperationTimes() {
 		_, err := dataBase.Exec(`

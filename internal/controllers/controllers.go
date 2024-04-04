@@ -18,6 +18,17 @@ import (
 
 type userContextKey string
 
+type RegisterFeedback struct {
+	NameValue              string
+	NameFeedback           string
+	LoginValue             string
+	LoginFeedback          string
+	PasswordValue          string
+	PasswordFeedback       string
+	RepeatPasswordValue    string
+	RepeatPasswordFeedback string
+}
+
 const (
 	secretString = "super_secret_string"
 )
@@ -27,14 +38,14 @@ var (
 		"GetOperationTime": expression.GetOperationTime,
 	}
 
-	loginTemplate              = template.Must(template.ParseFiles("static/templates/logIn.html"))
-	registerTemplate           = template.Must(template.ParseFiles("static/templates/register.html"))
-	invalidLoginRegister       = template.Must(template.ParseFiles("static/templates/invalidLoginRegister.html"))
-	inputExpressionTemplate    = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
-	inputListTemplate          = template.Must(template.ParseFiles("static/templates/inputList.html"))
-	listExpressionsTemplate    = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
-	configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
-	computingResourcesTemplate = template.Must(template.ParseFiles("static/templates/computingResources.html"))
+	loginTemplate               = template.Must(template.ParseFiles("static/templates/logIn.html"))
+	registerTemplate            = template.Must(template.ParseFiles("static/templates/register.html"))
+	invalidRegisterDataTemplate = template.Must(template.ParseFiles("static/templates/invalidRegisterData.html"))
+	inputExpressionTemplate     = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
+	inputListTemplate           = template.Must(template.ParseFiles("static/templates/inputList.html"))
+	listExpressionsTemplate     = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
+	configurationTemplate       = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
+	computingResourcesTemplate  = template.Must(template.ParseFiles("static/templates/computingResources.html"))
 )
 
 func generateAndReturnToken(writer http.ResponseWriter, login string) {
@@ -91,23 +102,66 @@ func RegisterHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
+func returnRegisterFeedback(writer http.ResponseWriter, registerFeedback *RegisterFeedback) {
+	writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+	if err := invalidRegisterDataTemplate.Execute(writer, registerFeedback); err != nil {
+		log.Printf("invalidRegisterDataTemplate error: %v\n", err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+}
+
 func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Request) {
 	name := request.PostFormValue("name")
 	login := request.PostFormValue("login")
 	password := request.PostFormValue("password")
+	repeatPassword := request.PostFormValue("repeat_password")
+
+	registerFeedback := &RegisterFeedback{
+		NameValue:           name,
+		LoginValue:          login,
+		PasswordValue:       password,
+		RepeatPasswordValue: repeatPassword,
+	}
+
+	if name == "" {
+		registerFeedback.NameFeedback = "Please provide a valid name"
+	}
+	if password == "" {
+		registerFeedback.PasswordFeedback = "Please provide a valid password"
+	}
+	if repeatPassword == "" {
+		registerFeedback.RepeatPasswordFeedback = "Please provide a valid password"
+	}
+	if password != "" && repeatPassword != "" && password != repeatPassword {
+		registerFeedback.PasswordFeedback = "Password mismatch"
+		registerFeedback.RepeatPasswordFeedback = "Password mismatch"
+	}
+	if login == "" {
+		registerFeedback.LoginFeedback = "Please provide a valid login"
+		returnRegisterFeedback(writer, registerFeedback)
+		return
+	}
 
 	checkingUser := database.GetUserByLogin(login)
 	if checkingUser.Login != "" {
-		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
-		invalidLoginRegister.Execute(writer, nil)
+		registerFeedback.LoginFeedback = "User with such login already exists"
+		returnRegisterFeedback(writer, registerFeedback)
 		return
 	}
+
+	if registerFeedback.NameFeedback != "" || registerFeedback.PasswordFeedback != "" || password != repeatPassword {
+		returnRegisterFeedback(writer, registerFeedback)
+		return
+	}
+
 	hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
 		log.Printf("error while hashing password: %v\n", err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 
-	database.InsertUserInDatabase(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
+	database.InsertUser(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
 	generateAndReturnToken(writer, login)
 }
 
@@ -122,7 +176,7 @@ func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 	input := request.PostFormValue("expression")
 	exp, err := expression.NewExpression(input)
-	database.InsertExpressionInDatabase(&exp)
+	database.InsertExpression(&exp)
 
 	if err != nil {
 		exp.Status = err.Error()
@@ -170,7 +224,7 @@ func ChangeConfigurationHandler(writer http.ResponseWriter, request *http.Reques
 	timeMultiply, _ := strconv.ParseInt(request.PostFormValue("time-multiply"), 10, 64)
 	timeDivide, _ := strconv.ParseInt(request.PostFormValue("time-divide"), 10, 64)
 
-	database.UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide)
+	database.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide)
 }
 
 func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request) {

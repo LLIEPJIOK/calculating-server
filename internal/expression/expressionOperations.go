@@ -4,10 +4,10 @@ import "time"
 
 var (
 	operationTimes = map[string]int64{
-		"time_plus":     200,
-		"time_minus":    200,
-		"time_multiply": 200,
-		"time_divide":   200,
+		"time-plus":     200,
+		"time-minus":    200,
+		"time-multiply": 200,
+		"time-divide":   200,
 	}
 )
 
@@ -23,34 +23,34 @@ func GetOperationTime(key string) int64 {
 	return operationTimes[key]
 }
 
-func UpdateOperationsTime(timePlus, timeMinus, timeMultiply, timeDivide int64) {
-	operationTimes["time_plus"] = timePlus
-	operationTimes["time_minus"] = timeMinus
-	operationTimes["time_multiply"] = timeMultiply
-	operationTimes["time_divide"] = timeDivide
+func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide int64) {
+	operationTimes["time-plus"] = timePlus
+	operationTimes["time-minus"] = timeMinus
+	operationTimes["time-multiply"] = timeMultiply
+	operationTimes["time-divide"] = timeDivide
 }
 
 func add(a, b float64) float64 {
-	time.Sleep(time.Duration(operationTimes["time_plus"]) * time.Millisecond)
+	time.Sleep(time.Duration(operationTimes["time-plus"]) * time.Millisecond)
 	return a + b
 }
 
 func minus(a, b float64) float64 {
-	time.Sleep(time.Duration(operationTimes["time_minus"]) * time.Millisecond)
+	time.Sleep(time.Duration(operationTimes["time-minus"]) * time.Millisecond)
 	return a - b
 }
 
 func multiply(a, b float64) float64 {
-	time.Sleep(time.Duration(operationTimes["time_multiply"]) * time.Millisecond)
+	time.Sleep(time.Duration(operationTimes["time-multiply"]) * time.Millisecond)
 	return a * b
 }
 
 func divide(a, b float64) float64 {
-	time.Sleep(time.Duration(operationTimes["time_divide"]) * time.Millisecond)
+	time.Sleep(time.Duration(operationTimes["time-divide"]) * time.Millisecond)
 	return a / b
 }
 
-func UpdateOperationTimes(newOperationTimes map[string]int64) {
+func UpdateOperationTimesMap(newOperationTimes map[string]int64) {
 	for operation, time := range newOperationTimes {
 		operationTimes[operation] = time
 	}

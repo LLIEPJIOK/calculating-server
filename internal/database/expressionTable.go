@@ -27,7 +27,7 @@ func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression {
 	return expressions
 }
 
-func InsertExpressionInDatabase(exp *expression.Expression) {
+func InsertExpression(exp *expression.Expression) {
 	_, err := dataBase.Exec(`
 		INSERT INTO "expressions"(exp, result, status, creation_time, calculation_time) 
 		VALUES($1, $2, $3, $4, $5)`,
