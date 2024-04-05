@@ -32,7 +32,7 @@ func (threadInfo *Worker) UpdateStatus(newStatus string) {
 func (threadInfo *Worker) String() string {
 	threadInfo.Mutex.RLock()
 	defer threadInfo.Mutex.RUnlock()
-	return fmt.Sprintf(`Agent #%d: %s. Last ping: %v`, threadInfo.Id, threadInfo.Status, threadInfo.LastPing.Format("2006-01-02 "))
+	return fmt.Sprintf(`Agent #%d: %s. Last ping: %v`, threadInfo.Id, threadInfo.Status, threadInfo.LastPing.Format("02.01.2006 15:04:05"))
 }
 
 func (threadInfo *Worker) Run() {

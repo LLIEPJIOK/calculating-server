@@ -15,12 +15,14 @@
 
 <body class="bg-primary">
 
+    <div class="image-container" id="image-container"></div>
+
     <div class="d-flex flex-column justify-content-center align-items-center login-area" id="input-block">
         <div class="rounded-3 p-4 bg-white input-block custom-shadow">
             <h4 class="d-flex justify-content-center fs-24">
                 Register
             </h4>
-            <form hx-post="/register/confirm" hx-swap="innerHTML">
+            <form hx-post="/register/confirm" hx-swap="innerHTML" hx-indicator="#spinner">
                 <div class="mb-3">
                     <label>Name</label>
                     <input type="text" name="name" class="form-control" value="" />
@@ -52,14 +54,21 @@
                         <div class="feedback"></div>
                 </div>
                 <div class="d-flex justify-content-center">
-                    <button type="submit" class="btn btn-primary btn-submit-input">Register</button>
+                    <span class="spinner-border" aria-hidden="true"></span>
+                    <button type="submit" class="btn btn-primary btn-submit-input btn-submit">Register</button>
+                    <span class="spinner-border text-primary" id="spinner" role="status" aria-hidden="true"></span>
                 </div>
             </form>
+            <div class="d-flex justify-content-center mt-2">
+                Want to<a href="/" class="ms-1">log in?</a>
+            </div>
         </div>
     </div>
 
     <script src="/static/scripts/reloadPage.js"></script>
     <script src="/static/scripts/changePasswordMode.js"></script>
+    <script src="/static/scripts/addBackgroundImages.js"></script>
+    <script src="/static/scripts/showHideSpinner.js"></script>
 
 </body>
 

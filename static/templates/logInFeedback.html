@@ -1,0 +1,29 @@
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/static/scripts/changePasswordMode.js"></script>
+
+<div class="mb-3">
+    <label for="login">Login</label>
+    <input type="text" name="login" class="form-control
+        {{ if ne .LoginFeedback "" }}
+        is-invalid
+        {{ end }}" value="{{ .LoginValue }}" />
+    <div class="feedback">{{ .LoginFeedback }}</div>
+</div>
+<div class="mb-4">
+    <label>Password</label>
+    <div class="input-group" id="show_hide_password">
+        <input type="password" name="password" class="form-control
+                {{ if ne .PasswordFeedback "" }}
+                is-invalid
+                {{ end }}" value="{{ .PasswordValue }}" />
+        <span class="input-group-text eye-slash">
+            <a href=""><img src="/static/resources/images/eye-slash.svg" alt="eye-slash"></a>
+        </span>
+    </div>
+    <div class="feedback">{{ .PasswordFeedback }}</div>
+</div>
+<div class="d-flex justify-content-center">
+    <span class="spinner-border" aria-hidden="true"></span>
+    <button type="submit" class="btn btn-primary btn-submit-input btn-submit">Log In</button>
+    <span class="spinner-border text-primary" id="spinner" role="status" aria-hidden="true"></span>
+</div>

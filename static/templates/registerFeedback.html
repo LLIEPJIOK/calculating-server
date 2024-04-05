@@ -21,9 +21,9 @@
     <label>Password</label>
     <div class="input-group" id="show_hide_password">
         <input type="password" name="password" class="form-control
-                {{ if ne .PasswordFeedback "" }}
-                is-invalid
-                {{ end }}" value="{{ .PasswordValue }}" />
+            {{ if ne .PasswordFeedback "" }}
+            is-invalid
+            {{ end }}" value="{{ .PasswordValue }}" />
         <span class="input-group-text eye-slash">
             <a href=""><img src="/static/resources/images/eye-slash.svg" alt="eye-slash"></a>
         </span>
@@ -44,5 +44,7 @@
         <div class="feedback">{{ .RepeatPasswordFeedback }}</div>
 </div>
 <div class="d-flex justify-content-center">
-    <button type="submit" class="btn btn-primary btn-submit-input">Register</button>
+    <span class="spinner-border" aria-hidden="true"></span>
+    <button type="submit" class="btn btn-primary btn-submit-input btn-submit">Register</button>
+    <span class="spinner-border text-primary" id="spinner" role="status" aria-hidden="true"></span>
 </div>

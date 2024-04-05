@@ -38,14 +38,15 @@ var (
 		"GetOperationTime": expression.GetOperationTime,
 	}
 
-	loginTemplate               = template.Must(template.ParseFiles("static/templates/logIn.html"))
-	registerTemplate            = template.Must(template.ParseFiles("static/templates/register.html"))
-	invalidRegisterDataTemplate = template.Must(template.ParseFiles("static/templates/invalidRegisterData.html"))
-	inputExpressionTemplate     = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
-	inputListTemplate           = template.Must(template.ParseFiles("static/templates/inputList.html"))
-	listExpressionsTemplate     = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
-	configurationTemplate       = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
-	computingResourcesTemplate  = template.Must(template.ParseFiles("static/templates/computingResources.html"))
+	logInTemplate              = template.Must(template.ParseFiles("static/templates/logIn.html"))
+	logInFeedbackTemplate      = template.Must(template.ParseFiles("static/templates/logInFeedback.html"))
+	registerTemplate           = template.Must(template.ParseFiles("static/templates/register.html"))
+	registerFeedbackTemplate   = template.Must(template.ParseFiles("static/templates/registerFeedback.html"))
+	inputExpressionTemplate    = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
+	inputListTemplate          = template.Must(template.ParseFiles("static/templates/inputList.html"))
+	listExpressionsTemplate    = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
+	configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
+	computingResourcesTemplate = template.Must(template.ParseFiles("static/templates/computingResources.html"))
 )
 
 func generateAndReturnToken(writer http.ResponseWriter, login string) {
@@ -74,10 +75,17 @@ func generateAndReturnToken(writer http.ResponseWriter, login string) {
 }
 
 func LogInHandler(writer http.ResponseWriter, request *http.Request) {
-	if err := loginTemplate.Execute(writer, nil); err != nil {
+	if err := logInTemplate.Execute(writer, nil); err != nil {
 		log.Printf("loginTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
+	}
+}
+
+func returnLogInFeedback(writer http.ResponseWriter, registerFeedback *RegisterFeedback) {
+	if err := logInFeedbackTemplate.Execute(writer, registerFeedback); err != nil {
+		log.Printf("logInFeedbackTemplate error: %v\n", err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
 
@@ -85,13 +93,22 @@ func ConfirmLogInHandler(writer http.ResponseWriter, request *http.Request) {
 	login := request.PostFormValue("login")
 	password := request.PostFormValue("password")
 
+	registerFeedback := &RegisterFeedback{
+		LoginValue:    login,
+		PasswordValue: password,
+	}
+
 	checkingUser := database.GetUserByLogin(login)
-	if err := bcrypt.CompareHashAndPassword([]byte(checkingUser.HashPassword), []byte(password)); err != nil {
-		// TODO: write incorrect login or password response
+	if err := bcrypt.CompareHashAndPassword([]byte(checkingUser.HashPassword), []byte(password)); err != nil || password == "" {
+		registerFeedback.LoginFeedback = "Invalid login or password"
+		registerFeedback.PasswordFeedback = "Invalid login or password"
+		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+		returnLogInFeedback(writer, registerFeedback)
 		return
 	}
 
 	generateAndReturnToken(writer, login)
+	returnLogInFeedback(writer, registerFeedback)
 }
 
 func RegisterHandler(writer http.ResponseWriter, request *http.Request) {
@@ -103,9 +120,8 @@ func RegisterHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func returnRegisterFeedback(writer http.ResponseWriter, registerFeedback *RegisterFeedback) {
-	writer.WriteHeader(http.StatusNonAuthoritativeInfo)
-	if err := invalidRegisterDataTemplate.Execute(writer, registerFeedback); err != nil {
-		log.Printf("invalidRegisterDataTemplate error: %v\n", err)
+	if err := registerFeedbackTemplate.Execute(writer, registerFeedback); err != nil {
+		log.Printf("registerFeedbackTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
@@ -138,6 +154,7 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 	}
 	if login == "" {
 		registerFeedback.LoginFeedback = "Please provide a valid login"
+		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
 		returnRegisterFeedback(writer, registerFeedback)
 		return
 	}
@@ -145,11 +162,13 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 	checkingUser := database.GetUserByLogin(login)
 	if checkingUser.Login != "" {
 		registerFeedback.LoginFeedback = "User with such login already exists"
+		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
 		returnRegisterFeedback(writer, registerFeedback)
 		return
 	}
 
 	if registerFeedback.NameFeedback != "" || registerFeedback.PasswordFeedback != "" || password != repeatPassword {
+		writer.WriteHeader(http.StatusNonAuthoritativeInfo)
 		returnRegisterFeedback(writer, registerFeedback)
 		return
 	}
@@ -163,6 +182,7 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 
 	database.InsertUser(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
 	generateAndReturnToken(writer, login)
+	returnRegisterFeedback(writer, registerFeedback)
 }
 
 func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
