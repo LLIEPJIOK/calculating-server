@@ -77,7 +77,7 @@ func Initialize() {
 
 	expressions := database.GetUncalculatingExpressions()
 	for _, expression := range expressions {
-		_ = expression.Parse()
+		expression.Parse()
 		ExpressionsChan <- *expression
 	}
 }

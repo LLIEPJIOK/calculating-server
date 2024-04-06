@@ -1,7 +1,6 @@
 package expression
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,21 +8,31 @@ import (
 )
 
 type Expression struct {
-	Id              int64
+	Login           string
+	Id              uint64
 	Exp             string
 	Result          float64
 	Status          string
 	CreationTime    time.Time
 	CalculationTime time.Time
+	OperationsTimes map[string]uint64
 	rpn             []interface{}
 }
 
-func NewExpression(exp string) (Expression, error) {
+func NewExpression(login, exp string) Expression {
 	expression := Expression{
+		Login:        login,
 		Exp:          exp,
 		CreationTime: time.Now(),
+		OperationsTimes: map[string]uint64{
+			"time-plus":     200,
+			"time-minus":    200,
+			"time-multiply": 200,
+			"time-divide":   200,
+		},
 	}
-	return expression, expression.Parse()
+	expression.Parse()
+	return expression
 }
 
 func isDigit(ch uint8) bool {
@@ -31,7 +40,7 @@ func isDigit(ch uint8) bool {
 }
 
 // parsing to reverse polish notation
-func (exp *Expression) Parse() error {
+func (exp *Expression) Parse() {
 	st := make([]uint8, 0)
 	var prevChar uint8 = '('
 	bracketsCnt := 0
@@ -39,9 +48,8 @@ func (exp *Expression) Parse() error {
 		ch := exp.Exp[i]
 		if isDigit(ch) {
 			if isDigit(prevChar) {
-				err := errors.New("two numbers in a row")
-				exp.Status = fmt.Sprintf("invalid expression: %v", err)
-				return err
+				exp.Status = "invalid expression: two numbers in a row"
+				return
 			}
 			length := strings.IndexAny(exp.Exp[i:], "-+*/() \t")
 			if length == -1 {
@@ -50,15 +58,14 @@ func (exp *Expression) Parse() error {
 			numb, err := strconv.ParseFloat(exp.Exp[i:i+length], 64)
 			if err != nil {
 				exp.Status = fmt.Sprintf("invalid expression: %v", err)
-				return err
+				return
 			}
 			exp.rpn = append(exp.rpn, numb)
 			i += length - 1
 		} else if ch == '(' {
 			if prevChar == ')' {
-				err := errors.New("incorrect placement of brackets")
-				exp.Status = fmt.Sprintf("invalid expression: %v", err)
-				return err
+				exp.Status = "invalid expression: incorrect placement of brackets"
+				return
 			}
 			bracketsCnt++
 			st = append(st, ch)
@@ -68,24 +75,20 @@ func (exp *Expression) Parse() error {
 				st = st[:len(st)-1]
 			}
 			if len(st) == 0 || !isDigit(prevChar) {
-				err := errors.New("incorrect placement of brackets")
-				exp.Status = fmt.Sprintf("invalid expression: %v", err)
-				fmt.Println(prevChar)
-				return err
+				exp.Status = "invalid expression: incorrect placement of brackets"
+				return
 			}
 			bracketsCnt--
 			st = st[:len(st)-1]
 		} else if strings.Contains(" \t", string(ch)) {
 			continue
 		} else if !strings.Contains("-+*/()", string(ch)) {
-			err := fmt.Errorf("unknown math symbol: %c", ch)
-			exp.Status = fmt.Sprintf("invalid expression: %v", err)
-			return err
+			exp.Status = fmt.Sprintf("invalid expression: unknown math symbol: %c", ch)
+			return
 		} else {
 			if !isDigit(prevChar) && !(prevChar == '(' && (ch == '-' || ch == '+')) {
-				err := errors.New("incorrect placement of operations")
-				exp.Status = fmt.Sprintf("invalid expression: %v", err)
-				return err
+				exp.Status = "invalid expression: incorrect placement of operations"
+				return
 			}
 			if len(st) != 0 {
 				for len(st) != 0 {
@@ -112,19 +115,15 @@ func (exp *Expression) Parse() error {
 		st = st[:len(st)-1]
 	}
 	if len(exp.rpn) == 0 {
-		err := errors.New("empty expression")
-		exp.Status = fmt.Sprintf("invalid expression: %v", err)
-		return err
+		exp.Status = "invalid expression: empty expression"
+		return
 	} else if bracketsCnt != 0 {
-		err := errors.New("incorrect placement of brackets")
-		exp.Status = fmt.Sprintf("invalid expression: %v", err)
-		return err
+		exp.Status = "invalid expression: incorrect placement of brackets"
+		return
 	} else if !isDigit(prevChar) && prevChar != ')' {
-		err := errors.New("incorrect placement of operations")
-		exp.Status = fmt.Sprintf("invalid expression: %v", err)
-		return err
+		exp.Status = "invalid expression: incorrect placement of operations"
+		return
 	}
-	return nil
 }
 
 // calculation from reverse polish notation
@@ -136,22 +135,22 @@ func (exp *Expression) Calculate() {
 		} else {
 			switch v.(uint8) {
 			case '_':
-				st[len(st)-1] = multiply(st[len(st)-1], -1)
+				st[len(st)-1] = multiply(st[len(st)-1], -1, exp.OperationsTimes["time-multiply"])
 			case '-':
-				st[len(st)-2] = minus(st[len(st)-2], st[len(st)-1])
+				st[len(st)-2] = minus(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-minus"])
 				st = st[:len(st)-1]
 			case '+':
-				st[len(st)-2] = add(st[len(st)-2], st[len(st)-1])
+				st[len(st)-2] = add(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-plus"])
 				st = st[:len(st)-1]
 			case '*':
-				st[len(st)-2] = multiply(st[len(st)-2], st[len(st)-1])
+				st[len(st)-2] = multiply(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-multiply"])
 				st = st[:len(st)-1]
 			case '/':
 				if st[len(st)-1] == 0 {
 					exp.Status = "invalid expression: division by zero"
 					return
 				}
-				st[len(st)-2] = divide(st[len(st)-2], st[len(st)-1])
+				st[len(st)-2] = divide(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-divide"])
 				st = st[:len(st)-1]
 			}
 		}
@@ -168,4 +167,28 @@ func (exp Expression) String() string {
 		str += fmt.Sprintf(",  Result: `%v`, Calculation time: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
 	}
 	return str
+}
+
+func add(a, b float64, seconds uint64) float64 {
+	time.Sleep(time.Duration(seconds) * time.Millisecond)
+	return a + b
+}
+
+func minus(a, b float64, seconds uint64) float64 {
+	time.Sleep(time.Duration(seconds) * time.Millisecond)
+	return a - b
+}
+
+func multiply(a, b float64, seconds uint64) float64 {
+	time.Sleep(time.Duration(seconds) * time.Millisecond)
+	return a * b
+}
+
+func divide(a, b float64, seconds uint64) float64 {
+	time.Sleep(time.Duration(seconds) * time.Millisecond)
+	return a / b
+}
+
+func GetOperationTime(operationsTime map[string]uint64, operation string) uint64 {
+	return operationsTime[operation]
 }

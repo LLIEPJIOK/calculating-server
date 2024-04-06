@@ -7,23 +7,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func createUsersTableIfNotExists() {
-	_, err := dataBase.Exec(`
-		CREATE TABLE IF NOT EXISTS "users" (
-			login VARCHAR(100) PRIMARY KEY,
-			name VARCHAR(100) NOT NULL,
-			hash_password VARCHAR(100) NOT NULL
-		)`)
-	if err != nil {
-		log.Fatal("error creating users table:", err)
-	}
-}
-
 func InsertUser(insertingUser *user.User) {
 	_, err := dataBase.Exec(`
-		INSERT INTO "users"(login, name, hash_password) 
-		VALUES($1, $2, $3)`,
-		insertingUser.Login, insertingUser.Name, insertingUser.HashPassword)
+		INSERT INTO "User"(login, name, hash_password) 
+		VALUES($1, $2, $3)
+		`, insertingUser.Login, insertingUser.Name, insertingUser.HashPassword)
 	if err != nil {
 		log.Printf("error in insert %#v in database: %v\n", *insertingUser, err)
 		return
@@ -33,9 +21,22 @@ func InsertUser(insertingUser *user.User) {
 func GetUserByLogin(login string) user.User {
 	var gettingUser user.User
 	dataBase.QueryRow(`
-		SELECT * 
-		FROM "users" 
+		SELECT
+			login, name, hash_password 
+		FROM "User"
 		WHERE login = $1`, login).Scan(&gettingUser.Login, &gettingUser.Name, &gettingUser.HashPassword)
 
 	return gettingUser
+}
+
+func createUsersTableIfNotExists() {
+	_, err := dataBase.Exec(`
+		CREATE TABLE IF NOT EXISTS "User" (
+			login TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			hash_password TEXT NOT NULL
+		)`)
+	if err != nil {
+		log.Fatal("error creating users table:", err)
+	}
 }

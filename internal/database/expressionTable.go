@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/LLIEPJIOK/calculating-server/internal/expression"
@@ -12,7 +13,7 @@ func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression {
 	var expressions []*expression.Expression
 	for rows.Next() {
 		var exp expression.Expression
-		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
+		err := rows.Scan(&exp.Login, &exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
 		if err != nil {
 			log.Println("error in getting data from database:", err)
 			return nil
@@ -27,39 +28,49 @@ func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression {
 	return expressions
 }
 
+func getMaxExpressionId(userLogin string) (uint64, error) {
+	var maxId uint64
+	err := dataBase.QueryRow(`
+		SELECT 
+			COALESCE(MAX(id), 0, MAX(id))
+		FROM "Expression"
+		WHERE user_login = $1
+		`, userLogin).Scan(&maxId)
+	if err != nil {
+		return 0, fmt.Errorf("error getting max id where user_login = %v: %v", userLogin, err)
+	}
+	return maxId, nil
+}
+
 func InsertExpression(exp *expression.Expression) {
-	_, err := dataBase.Exec(`
-		INSERT INTO "expressions"(exp, result, status, creation_time, calculation_time) 
-		VALUES($1, $2, $3, $4, $5)`,
-		exp.Exp, exp.Result, exp.Status, exp.CreationTime, exp.CalculationTime)
+	prevId, err := getMaxExpressionId(exp.Login)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	exp.Id = prevId + 1
+	_, err = dataBase.Exec(`
+		INSERT INTO "Expression"(user_login, id, exp, result, status, creation_time, calculation_time) 
+		VALUES($1, $2, $3, $4, $5, $6, $7)
+		`, exp.Login, exp.Id, exp.Exp, exp.Result, exp.Status, exp.CreationTime, exp.CalculationTime)
 	if err != nil {
 		log.Printf("error in insert %#v in database: %v\n", *exp, err)
 		return
 	}
-
-	err = dataBase.QueryRow(`SELECT LASTVAL()`).Scan(&exp.Id)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
-func GetExpressionById(id string) []*expression.Expression {
-	var rows *sql.Rows
-	var err error
-	if id == "" {
-		rows, err = dataBase.Query(`
-			SELECT * 
-			FROM "expressions" 
-			ORDER BY id DESC`)
-	} else {
-		rows, err = dataBase.Query(`
-			SELECT * 
-			FROM "expressions" 
-			WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%'
-			ORDER BY id ASC`, id)
-	}
+func GetExpressionsById(id string, userLogin string) []*expression.Expression {
+	rows, err := dataBase.Query(`
+		SELECT 
+			user_login, id, exp, result, status, creation_time, calculation_time
+		FROM "Expression"
+		WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%' and user_login = $2
+		ORDER BY id ASC
+		`, id, userLogin)
 	if err != nil {
-		log.Fatal("error in getting data from database:", err)
+		log.Println("error in getting data from database:", err)
+		return nil
 	}
 	defer rows.Close()
 
@@ -68,11 +79,14 @@ func GetExpressionById(id string) []*expression.Expression {
 
 func GetUncalculatingExpressions() []*expression.Expression {
 	rows, err := dataBase.Query(`
-		SELECT * 
-		FROM "expressions"
-		WHERE status = 'calculating' OR status = 'in queue'`)
+		SELECT
+			user_login, id, exp, result, status, creation_time, calculation_time
+		FROM "Expression"
+		WHERE status = 'calculating' OR status = 'in queue'
+		`)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil
 	}
 	defer rows.Close()
 
@@ -81,72 +95,57 @@ func GetUncalculatingExpressions() []*expression.Expression {
 
 func UpdateExpressionStatus(exp *expression.Expression) {
 	_, err := dataBase.Exec(`
-		UPDATE "expressions" 
+		UPDATE "Expression"
 		SET status = $1 
-		WHERE id = $2`,
-		exp.Status, exp.Id)
+		WHERE id = $2 and user_login = $3
+		`, exp.Status, exp.Id, exp.Login)
 	if err != nil {
-		log.Printf("error in setting %#v in database: %v\n", *exp, err)
+		log.Printf("error in updating %#v in database: %v\n", *exp, err)
 	}
 }
 
 func UpdateExpressionResult(exp *expression.Expression) {
 	_, err := dataBase.Exec(`
-		UPDATE "expressions" 
-		SET result = $1 
-		WHERE id = $2`,
-		exp.Result, exp.Id)
+		UPDATE "Expression"
+		SET result = $1, calculation_time = $2
+		WHERE id = $3 and user_login = $4`,
+		exp.Result, exp.CalculationTime, exp.Id, exp.Login)
 	if err != nil {
-		log.Printf("error in setting %#v in database: %v\n", *exp, err)
-	}
-
-	_, err = dataBase.Exec(`
-		UPDATE "expressions" 
-		SET calculation_time = $1 
-		WHERE id = $2`,
-		exp.CalculationTime, exp.Id)
-	if err != nil {
-		log.Printf("error in setting %#v in database: %v\n", *exp, err)
+		log.Printf("error in updating %#v in database: %v\n", *exp, err)
 	}
 }
 
-func GetLastExpressions() []*expression.Expression {
-	rows, err := dataBase.Query("SELECT * FROM \"expressions\" ORDER BY creation_time DESC LIMIT 10")
+func GetLastExpressions(userLogin string) []*expression.Expression {
+	rows, err := dataBase.Query(`
+		SELECT 
+			user_login, id, exp, result, status, creation_time, calculation_time
+		FROM "Expression"
+		WHERE user_login = $1
+		ORDER BY creation_time DESC 
+		LIMIT 10
+		`, userLogin)
 	if err != nil {
 		log.Println("error in getting data from database:", err)
 		return nil
 	}
 	defer rows.Close()
 
-	lastInputs := make([]*expression.Expression, 0, 10)
-	for rows.Next() {
-		var exp expression.Expression
-		err := rows.Scan(&exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.CreationTime, &exp.CalculationTime)
-		if err != nil {
-			log.Println("error in getting data from database:", err)
-			return nil
-		}
-		lastInputs = append(lastInputs, &exp)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Println("error in getting data from database:", err)
-		return nil
-	}
-	return lastInputs
+	return rowsToExpressionsSlice(rows)
 }
 
-func createExpressionsTableIfNotExists() {
+func createExpressionTableIfNotExists() {
 	_, err := dataBase.Exec(`
-		CREATE TABLE IF NOT EXISTS "expressions" (
-			id SERIAL PRIMARY KEY,
-			exp CHARACTER VARYING,
-			result DOUBLE PRECISION,
-			status CHARACTER VARYING,
+		CREATE TABLE IF NOT EXISTS "Expression" (
+			user_login TEXT REFERENCES "User"(login),
+			id INT,
+			exp TEXT,
+			result NUMERIC,
+			status TEXT,
 			creation_time TIMESTAMP,
-			calculation_time TIMESTAMP
+			calculation_time TIMESTAMP,
+			PRIMARY KEY (user_login, id)
 		)`)
 	if err != nil {
-		log.Fatal("error creating expressions table:", err)
+		log.Fatal("error creating expression table:", err)
 	}
 }

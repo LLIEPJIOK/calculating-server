@@ -1,83 +1,95 @@
 package database
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/LLIEPJIOK/calculating-server/internal/expression"
 	_ "github.com/lib/pq"
 )
 
-func createOperationTimeTableIfNotExists() {
-	_, err := dataBase.Exec(`
-		CREATE TABLE IF NOT EXISTS "operations_time" (
-			key CHARACTER VARYING PRIMARY KEY,
-			value INT
-		)`)
+func GetOperationTime(operation, userLogin string) uint64 {
+	var time uint64
+	err := dataBase.QueryRow(`
+		SELECT * 
+		FROM "OperationsTime"
+		WHERE user_login = $1 and operation = $2
+		`, userLogin, operation).Scan(&time)
 	if err != nil {
-		log.Fatal("error creating expressions table:", err)
+		log.Println("error getting data from database:", err)
+		return 200
 	}
+	return time
 }
 
-func GetOperationTimes() map[string]int64 {
+func GetOperationsTime(userLogin string) (map[string]uint64, error) {
 	rows, err := dataBase.Query(`
-		SELECT * 
-		FROM "operations_time"`)
+		SELECT
+			operation, time
+		FROM "OperationsTime"
+		WHERE user_login = $1
+		`, userLogin)
 	if err != nil {
-		log.Fatal("error getting data from database:", err)
+		return nil, fmt.Errorf("error getting data from database: %v", err)
 	}
 
-	operationTimes := make(map[string]int64)
+	operationTimes := make(map[string]uint64)
 	for rows.Next() {
-		var key string
-		var val int64
-		err := rows.Scan(&key, &val)
+		var operation string
+		var time uint64
+		err := rows.Scan(&operation, &time)
 		if err != nil {
-			log.Fatal("error in getting data from database:", err)
+			return nil, fmt.Errorf("error getting operations time: %v", err)
 		}
-		operationTimes[key] = val
+		operationTimes[operation] = time
 	}
 	if err := rows.Err(); err != nil {
-		log.Fatal("error in getting data from database:", err)
+		return nil, fmt.Errorf("error getting operations time: %v", err)
 	}
-	return operationTimes
+	return operationTimes, nil
 }
 
-func InsertOperationTimes(operationTimes map[string]int64) {
-	for key, val := range operationTimes {
-		var exists bool
-		err := dataBase.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1
-			FROM "operations_time"
-			WHERE key = $1
-		)`, key).Scan(&exists)
-		if err != nil {
-			log.Fatal("error checking record existence:", err)
-		}
-
-		if !exists {
-			_, err := dataBase.Exec(`
-			INSERT INTO "operations_time"(key, value)
-			VALUES ($1, $2)`,
-				key, val)
-			if err != nil {
-				log.Fatal("error inserting record:", err)
-			}
-		}
+func InsertDefaultOperationTimes(userLogin string) {
+	_, err := dataBase.Exec(`
+		INSERT INTO "OperationsTime"(user_login, operation, time)
+		VALUES 
+			($1, 'time-plus', 200),
+			($1, 'time-minus', 200),
+			($1, 'time-multiply', 200),
+			($1, 'time-divide', 200);
+		`, userLogin)
+	if err != nil {
+		log.Fatal("error inserting default operations time:", err)
 	}
 }
 
-func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide int64) {
-	expression.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide)
-
-	for key, val := range expression.GetOperationTimes() {
+func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide uint64, userLogin string) {
+	operationTimes := map[string]uint64{
+		"time-plus":     timePlus,
+		"time-minus":    timeMinus,
+		"time-multiply": timeMultiply,
+		"time-divide":   timeDivide,
+	}
+	for operation, time := range operationTimes {
 		_, err := dataBase.Exec(`
-			UPDATE "operations_time"
-			SET value = $2
-			WHERE key = $1`,
-			key, val)
+			UPDATE "OperationsTime"
+			SET time = $1
+			WHERE operation = $2 and user_login = $3
+			`, time, operation, userLogin)
 		if err != nil {
 			log.Fatal("error updating operation:", err)
 		}
+	}
+}
+
+func createOperationsTimeTableIfNotExists() {
+	_, err := dataBase.Exec(`
+		CREATE TABLE IF NOT EXISTS "OperationsTime" (
+			user_login TEXT REFERENCES "User"(login),
+			operation TEXT,
+			time INT,
+			PRIMARY KEY (user_login, operation)
+		)`)
+	if err != nil {
+		log.Fatal("error creating OperationsTime table:", err)
 	}
 }

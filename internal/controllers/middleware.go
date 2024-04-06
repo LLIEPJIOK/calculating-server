@@ -13,10 +13,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const (
-	keyUserString userContextKey = "user"
-)
-
 func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		defer func() {
@@ -50,7 +46,13 @@ func getUserFromTokenString(tokenString string) (user.User, error) {
 	if float64(time.Now().Unix()) > claims["exp"].(float64) {
 		return user.User{}, fmt.Errorf("token is expired")
 	}
-	return database.GetUserByLogin(claims["login"].(string)), nil
+
+	currentUser := database.GetUserByLogin(claims["login"].(string))
+	if currentUser.Login == "" {
+		return user.User{}, fmt.Errorf("token is invalid: %#v", token)
+	}
+
+	return currentUser, nil
 }
 
 func CheckingTokenBeforeLoginMiddleWare(next http.HandlerFunc) http.HandlerFunc {
@@ -69,8 +71,11 @@ func CheckingTokenBeforeLoginMiddleWare(next http.HandlerFunc) http.HandlerFunc 
 		tokenString := cookie.Value
 		currentUser, err := getUserFromTokenString(tokenString)
 		if err != nil {
-			log.Println(err)
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			http.SetCookie(writer, &http.Cookie{
+				Name:   "Authorization",
+				MaxAge: -1,
+			})
+			next.ServeHTTP(writer, request)
 			return
 		}
 
@@ -95,8 +100,11 @@ func CheckingTokenAfterLoginMiddleWare(next http.HandlerFunc) http.HandlerFunc {
 		tokenString := cookie.Value
 		currentUser, err := getUserFromTokenString(tokenString)
 		if err != nil {
-			log.Println(err)
-			http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			http.SetCookie(writer, &http.Cookie{
+				Name:   "Authorization",
+				MaxAge: -1,
+			})
+			http.Redirect(writer, request, "/", http.StatusSeeOther)
 			return
 		}
 

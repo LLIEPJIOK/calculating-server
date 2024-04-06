@@ -41,22 +41,22 @@
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
                     <input type="number" name="time-plus" class="form-control" min="0" 
-                        value="{{ GetOperationTime "time-plus" }}" />
+                        value="{{ GetOperationTime . "time-plus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-minus">- execution time (ms)</label>
                     <input type="number" name="time-minus" class="form-control" min="0" 
-                        value="{{ GetOperationTime "time-minus" }}" />
+                        value="{{ GetOperationTime . "time-minus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-multiply">* execution time (ms)</label>
                     <input type="number" name="time-multiply" class="form-control" min="0" 
-                        value="{{ GetOperationTime "time-multiply" }}" />
+                        value="{{ GetOperationTime . "time-multiply" }}" />
                 </div>
                 <div class=" mb-3">
                     <label for="time-divide">/ execution time (ms)</label>
                     <input type="number" name="time-divide" class="form-control" min="0"
-                        value="{{ GetOperationTime "time-divide" }}" />
+                        value="{{ GetOperationTime . "time-divide" }}" />
                 </div>
                 <div class="d-flex justify-content-center">
                     <button type="submit" class="btn btn-outline-light btn-submit-input">Apply</button>

@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 	"text/template"
 	"time"
@@ -30,7 +31,8 @@ type RegisterFeedback struct {
 }
 
 const (
-	secretString = "super_secret_string"
+	secretString                 = "super_secret_string"
+	keyUserString userContextKey = "user"
 )
 
 var (
@@ -181,12 +183,21 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 	}
 
 	database.InsertUser(&user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
+	database.InsertDefaultOperationTimes(login)
 	generateAndReturnToken(writer, login)
 	returnRegisterFeedback(writer, registerFeedback)
 }
 
 func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
-	if err := inputExpressionTemplate.Execute(writer, database.GetLastExpressions()); err != nil {
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("InputExpressionHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	if err := inputExpressionTemplate.Execute(writer, database.GetLastExpressions(currentUser.Login)); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -194,20 +205,29 @@ func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) {
-	input := request.PostFormValue("expression")
-	exp, err := expression.NewExpression(input)
-	database.InsertExpression(&exp)
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("AddExpressionHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 
-	if err != nil {
-		exp.Status = err.Error()
-	} else {
+	input := request.PostFormValue("expression")
+	exp := expression.NewExpression(currentUser.Login, input)
+	operationsTime, err := database.GetOperationsTime(currentUser.Login)
+	if err == nil {
+		exp.OperationsTimes = operationsTime
+	}
+	if exp.Status == "" {
 		exp.Status = "in queue"
+	}
+	database.InsertExpression(&exp)
+	if exp.Status == "in queue" {
 		workers.ExpressionsChan <- exp
 	}
 
-	database.UpdateExpressionStatus(&exp)
-
-	if err := inputListTemplate.Execute(writer, database.GetLastExpressions()); err != nil {
+	if err := inputListTemplate.Execute(writer, database.GetLastExpressions(currentUser.Login)); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -215,8 +235,17 @@ func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ListExpressionsHandler(writer http.ResponseWriter, request *http.Request) {
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("ListExpressionsHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 	searchId := request.URL.Query().Get("id")
-	exps := database.GetExpressionById(searchId)
+	exps := database.GetExpressionsById(searchId, currentUser.Login)
+	// TODO: create struct
 	if err := listExpressionsTemplate.Execute(writer, struct {
 		Exps     []*expression.Expression
 		SearchId string
@@ -231,7 +260,21 @@ func ListExpressionsHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ConfigurationHandler(writer http.ResponseWriter, request *http.Request) {
-	if err := configurationTemplate.Execute(writer, expression.GetOperationTimes()); err != nil {
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("ConfigurationHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	operationsTimes, err := database.GetOperationsTime(currentUser.Login)
+	if err != nil {
+		log.Println(err)
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+
+	if err := configurationTemplate.Execute(writer, operationsTimes); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -239,12 +282,20 @@ func ConfigurationHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func ChangeConfigurationHandler(writer http.ResponseWriter, request *http.Request) {
-	timePlus, _ := strconv.ParseInt(request.PostFormValue("time-plus"), 10, 64)
-	timeMinus, _ := strconv.ParseInt(request.PostFormValue("time-minus"), 10, 64)
-	timeMultiply, _ := strconv.ParseInt(request.PostFormValue("time-multiply"), 10, 64)
-	timeDivide, _ := strconv.ParseInt(request.PostFormValue("time-divide"), 10, 64)
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("ChangeConfigurationHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 
-	database.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide)
+	timePlus, _ := strconv.ParseUint(request.PostFormValue("time-plus"), 10, 64)
+	timeMinus, _ := strconv.ParseUint(request.PostFormValue("time-minus"), 10, 64)
+	timeMultiply, _ := strconv.ParseUint(request.PostFormValue("time-multiply"), 10, 64)
+	timeDivide, _ := strconv.ParseUint(request.PostFormValue("time-divide"), 10, 64)
+
+	database.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide, currentUser.Login)
 }
 
 func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request) {
@@ -262,10 +313,10 @@ func ConfigureControllers(router *mux.Router) {
 	router.HandleFunc("/register", CheckingTokenBeforeLoginMiddleWare(RegisterHandler)).Methods("GET")
 	router.HandleFunc("/register/confirm", ConfirmRegistrationHandler).Methods("POST")
 	router.HandleFunc("/input-expression", CheckingTokenAfterLoginMiddleWare(InputExpressionHandler)).Methods("GET")
-	router.HandleFunc("/add-expression", AddExpressionHandler).Methods("POST")
+	router.HandleFunc("/add-expression", CheckingTokenAfterLoginMiddleWare(AddExpressionHandler)).Methods("POST")
 	router.HandleFunc("/list-expressions", CheckingTokenAfterLoginMiddleWare(ListExpressionsHandler)).Methods("GET")
 	router.HandleFunc("/configuration", CheckingTokenAfterLoginMiddleWare(ConfigurationHandler)).Methods("GET")
-	router.HandleFunc("/configuration/change", ChangeConfigurationHandler).Methods("PUT")
+	router.HandleFunc("/configuration/change", CheckingTokenAfterLoginMiddleWare(ChangeConfigurationHandler)).Methods("PUT")
 	router.HandleFunc("/computing-resources", CheckingTokenAfterLoginMiddleWare(ComputingResourcesHandler)).Methods("GET")
 
 	fileServer := http.FileServer(http.Dir("./static"))
