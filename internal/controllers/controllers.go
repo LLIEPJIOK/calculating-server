@@ -30,6 +30,11 @@ type RegisterFeedback struct {
 	RepeatPasswordFeedback string
 }
 
+type InputExpressionPageInfo struct {
+	UserName    string
+	Expressions []*expression.Expression
+}
+
 const (
 	secretString                 = "super_secret_string"
 	keyUserString userContextKey = "user"
@@ -188,6 +193,14 @@ func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Reques
 	returnRegisterFeedback(writer, registerFeedback)
 }
 
+func LogOutHandler(writer http.ResponseWriter, request *http.Request) {
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "Authorization",
+		MaxAge: -1,
+	})
+	http.Redirect(writer, request, "/", http.StatusSeeOther)
+}
+
 func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 	contextUser := request.Context().Value(keyUserString)
 	currentUser, ok := contextUser.(user.User)
@@ -197,7 +210,10 @@ func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if err := inputExpressionTemplate.Execute(writer, database.GetLastExpressions(currentUser.Login)); err != nil {
+	if err := inputExpressionTemplate.Execute(writer, InputExpressionPageInfo{
+		UserName:    currentUser.Name,
+		Expressions: database.GetLastExpressions(currentUser.Login),
+	}); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -247,9 +263,11 @@ func ListExpressionsHandler(writer http.ResponseWriter, request *http.Request) {
 	exps := database.GetExpressionsById(searchId, currentUser.Login)
 	// TODO: create struct
 	if err := listExpressionsTemplate.Execute(writer, struct {
+		UserName string
 		Exps     []*expression.Expression
 		SearchId string
 	}{
+		UserName: currentUser.Name,
 		Exps:     exps,
 		SearchId: searchId,
 	}); err != nil {
@@ -274,7 +292,13 @@ func ConfigurationHandler(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
-	if err := configurationTemplate.Execute(writer, operationsTimes); err != nil {
+	if err := configurationTemplate.Execute(writer, struct {
+		UserName       string
+		OperationsTime map[string]uint64
+	}{
+		UserName:       currentUser.Name,
+		OperationsTime: operationsTimes,
+	}); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -299,7 +323,21 @@ func ChangeConfigurationHandler(writer http.ResponseWriter, request *http.Reques
 }
 
 func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request) {
-	if err := computingResourcesTemplate.Execute(writer, workers.Workers); err != nil {
+	contextUser := request.Context().Value(keyUserString)
+	currentUser, ok := contextUser.(user.User)
+	if !ok {
+		log.Printf("ComputingResourcesHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	if err := computingResourcesTemplate.Execute(writer, struct {
+		UserName string
+		Workers  []*workers.Worker
+	}{
+		UserName: currentUser.Name,
+		Workers:  workers.Workers,
+	}); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -312,6 +350,7 @@ func ConfigureControllers(router *mux.Router) {
 	router.HandleFunc("/login/confirm", ConfirmLogInHandler).Methods("POST")
 	router.HandleFunc("/register", CheckingTokenBeforeLoginMiddleWare(RegisterHandler)).Methods("GET")
 	router.HandleFunc("/register/confirm", ConfirmRegistrationHandler).Methods("POST")
+	router.HandleFunc("/log-out", LogOutHandler).Methods("GET")
 	router.HandleFunc("/input-expression", CheckingTokenAfterLoginMiddleWare(InputExpressionHandler)).Methods("GET")
 	router.HandleFunc("/add-expression", CheckingTokenAfterLoginMiddleWare(AddExpressionHandler)).Methods("POST")
 	router.HandleFunc("/list-expressions", CheckingTokenAfterLoginMiddleWare(ListExpressionsHandler)).Methods("GET")

@@ -14,49 +14,91 @@
 
 <body>
 
-    <nav class="navbar navbar-expand navbar-light bg-primary" id="intro-dm">
-        <div class="container" >
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/input-expression">Input expression</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/list-expressions">List expressions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/configuration">Configuration</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/computing-resources">Resources</a>
-                    </li>
-                </ul>
+    <header class="navbar navbar-expand-lg fixed-top bg-primary">
+        <nav class="container-xxl flex-wrap flex-lg-nowrap bg-primary" aria-label="Main navigation">
+            <div class="navbar-brand text-white fw-bold px-2 px-lg-3">
+                <img src="/static/resources/images/logo.png" alt="calculator" width="30px" height="30px"
+                    class="d-inline-block">
+                Calculator
             </div>
-        </div>
-    </nav>
+            <button type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarNav"
+                class="navbar-toggler navbar-dark" aria-controls="navbarNav navbarLogout" aria-expanded="false"
+                aria-label="Open navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="offcanvas-lg offcanvas-end flex-grow-1 bg-primary" id="navbarNav" tabindex="-1"
+                aria-label="Navbar offcanvas label" data-bs-scroll="true" aria-modal="true" role="dialog">
+                <div class="offcanvas-header px-4 pb-0">
+                    <div class="offcanvas-title text-white fw-bold text-white">
+                        <img src="/static/resources/images/logo.png" alt="calculator" width="25px" height="25px"
+                            class="d-inline-block">
+                        Calculator
+                    </div>
+                    <button type="button" data-bs-dismiss="offcanvas" data-bs-target="#navbarNav"
+                        class="btn-close btn-close-white navbar-toggler" aria-controls="navbarNav navbarLogout"
+                        aria-expanded="false" aria-label="Close navigation">
+                    </button>
+                </div>
+                <div class="offcanvas-body p-4 pt-0 p-lg-0">
+                    <hr class="d-lg-none text-white-50">
+                    <ul class="navbar-nav flexflex-wrap">
+                        <li class="nav-item px-2 px-lg-3">
+                            <a class="nav-link text-white" href="/input-expression">Input
+                                expression</a>
+                        </li>
+                        <li class="nav-item px-2 px-lg-3">
+                            <a class="nav-link text-white" href="/list-expressions">List
+                                expressions</a>
+                        </li>
+                        <li class="nav-item px-2 px-lg-3">
+                            <a class="nav-link text-white" href="/configuration">Configuration</a>
+                        </li>
+                        <li class="nav-item px-2 px-lg-3">
+                            <a class="nav-link text-white" href="/computing-resources">Resources</a>
+                        </li>
+                    </ul>
+                    <hr class="d-lg-none text-white-50">
+                    <ul class="navbar-nav flex flex-wrap ms-md-auto">
+                        <li class="nav-item px-2 px-lg-3">
+                            <div class="nav-link text-white" href="">
+                                <img src="/static/resources/images/user.png" alt="user" width="25px" height="25px"
+                                    class="d-inline-block">
+                                {{ .UserName }}</>
+                        </li>
+                        <li class="nav-item px-2 px-lg-3">
+                            <a class="nav-link text-white" href="/log-out">
+                                <img src="/static/resources/images/logOut.png" alt="user" width="25px" height="25px"
+                                    class="d-inline-block">
+                                Log out</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-    <div class="d-flex flex-column justify-content-center align-items-center input-area" id="input-block">
+    <div class="d-flex flex-column justify-content-center align-items-center input-area">
         <div class="rounded-3 p-4 bg-primary text-white input-block">
             <form hx-put="/configuration/change" hx-swap="none">
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
-                    <input type="number" name="time-plus" class="form-control" min="0" 
-                        value="{{ GetOperationTime . "time-plus" }}" />
+                    <input type="number" name="time-plus" class="form-control" min="0"
+                        value="{{ GetOperationTime .OperationsTime "time-plus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-minus">- execution time (ms)</label>
-                    <input type="number" name="time-minus" class="form-control" min="0" 
-                        value="{{ GetOperationTime . "time-minus" }}" />
+                    <input type="number" name="time-minus" class="form-control" min="0"
+                        value="{{ GetOperationTime .OperationsTime  "time-minus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-multiply">* execution time (ms)</label>
-                    <input type="number" name="time-multiply" class="form-control" min="0" 
-                        value="{{ GetOperationTime . "time-multiply" }}" />
+                    <input type="number" name="time-multiply" class="form-control" min="0"
+                        value="{{ GetOperationTime .OperationsTime  "time-multiply" }}" />
                 </div>
                 <div class=" mb-3">
                     <label for="time-divide">/ execution time (ms)</label>
                     <input type="number" name="time-divide" class="form-control" min="0"
-                        value="{{ GetOperationTime . "time-divide" }}" />
+                        value="{{ GetOperationTime .OperationsTime  "time-divide" }}" />
                 </div>
                 <div class="d-flex justify-content-center">
                     <button type="submit" class="btn btn-outline-light btn-submit-input">Apply</button>

@@ -1,11 +1,11 @@
-li {
+/* li {
     margin-right: 30px;
     font-weight: 600;
     font-size: 16px;
-}
+} */
 
 .input-area {
-    height: 80vh;
+    height: 100vh;
 }
 
 .input-block {
