@@ -1,0 +1,1281 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cmd: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/LLIEPJIOK/calculating-server/cmd/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/LLIEPJIOK/calculating-server/internal/controllers/controllers.go (0.0%)</option>
+				
+				<option value="file2">github.com/LLIEPJIOK/calculating-server/internal/controllers/middleware.go (0.0%)</option>
+				
+				<option value="file3">github.com/LLIEPJIOK/calculating-server/internal/database/configuration.go (0.0%)</option>
+				
+				<option value="file4">github.com/LLIEPJIOK/calculating-server/internal/database/expressionTable.go (0.0%)</option>
+				
+				<option value="file5">github.com/LLIEPJIOK/calculating-server/internal/database/operationTimeTable.go (0.0%)</option>
+				
+				<option value="file6">github.com/LLIEPJIOK/calculating-server/internal/database/userTable.go (0.0%)</option>
+				
+				<option value="file7">github.com/LLIEPJIOK/calculating-server/internal/expression/expression.go (95.1%)</option>
+				
+				<option value="file8">github.com/LLIEPJIOK/calculating-server/internal/workers/workers.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "github.com/LLIEPJIOK/calculating-server/internal/controllers"
+        "github.com/LLIEPJIOK/calculating-server/internal/database"
+        "github.com/LLIEPJIOK/calculating-server/internal/workers"
+        "github.com/gorilla/mux"
+)
+
+func init() <span class="cov0" title="0">{
+        database.Configure()
+        workers.Initialize()
+}</span>
+
+func main() <span class="cov0" title="0">{
+        defer database.Close()
+        defer workers.CloseExpressionsChan()
+
+        router := mux.NewRouter()
+        controllers.ConfigureControllers(router)
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package controllers
+
+import (
+        "log"
+        "net/http"
+        "reflect"
+        "strconv"
+        "text/template"
+        "time"
+
+        "github.com/LLIEPJIOK/calculating-server/internal/database"
+        "github.com/LLIEPJIOK/calculating-server/internal/expression"
+        "github.com/LLIEPJIOK/calculating-server/internal/user"
+        "github.com/LLIEPJIOK/calculating-server/internal/workers"
+        "github.com/golang-jwt/jwt/v5"
+        "github.com/gorilla/mux"
+        "golang.org/x/crypto/bcrypt"
+)
+
+type userContextKey string
+
+type RegisterFeedback struct {
+        NameValue              string
+        NameFeedback           string
+        LoginValue             string
+        LoginFeedback          string
+        PasswordValue          string
+        PasswordFeedback       string
+        RepeatPasswordValue    string
+        RepeatPasswordFeedback string
+}
+
+type InputExpressionPageInfo struct {
+        UserName    string
+        Expressions []*expression.Expression
+}
+
+const (
+        secretString                 = "super_secret_string"
+        keyUserString userContextKey = "user"
+)
+
+var (
+        configurationFuncMap = template.FuncMap{
+                "GetOperationTime": expression.GetOperationTime,
+        }
+
+        logInTemplate              = template.Must(template.ParseFiles("static/templates/logIn.html"))
+        logInFeedbackTemplate      = template.Must(template.ParseFiles("static/templates/logInFeedback.html"))
+        registerTemplate           = template.Must(template.ParseFiles("static/templates/register.html"))
+        registerFeedbackTemplate   = template.Must(template.ParseFiles("static/templates/registerFeedback.html"))
+        inputExpressionTemplate    = template.Must(template.ParseFiles("static/templates/inputExpression.html"))
+        inputListTemplate          = template.Must(template.ParseFiles("static/templates/inputList.html"))
+        listExpressionsTemplate    = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
+        configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
+        computingResourcesTemplate = template.Must(template.ParseFiles("static/templates/computingResources.html"))
+)
+
+func generateAndReturnToken(writer http.ResponseWriter, login string) <span class="cov0" title="0">{
+        token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+                "login": login,
+                "nbf":   time.Now().Unix(),
+                "exp":   time.Now().Add(time.Hour * 24).Unix(),
+                "iat":   time.Now(),
+        })
+
+        tokenString, err := token.SignedString([]byte(secretString))
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("generate token error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+        <span class="cov0" title="0">http.SetCookie(writer, &amp;http.Cookie{
+                Name:     "Authorization",
+                Value:    tokenString,
+                Path:     "/",
+                MaxAge:   3600 * 24,
+                HttpOnly: true,
+                Secure:   true,
+                SameSite: http.SameSiteDefaultMode,
+        })</span>
+}
+
+func LogInHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        if err := logInTemplate.Execute(writer, nil); err != nil </span><span class="cov0" title="0">{
+                log.Printf("loginTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func returnLogInFeedback(writer http.ResponseWriter, registerFeedback *RegisterFeedback) <span class="cov0" title="0">{
+        if err := logInFeedbackTemplate.Execute(writer, registerFeedback); err != nil </span><span class="cov0" title="0">{
+                log.Printf("logInFeedbackTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+        }</span>
+}
+
+func ConfirmLogInHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        login := request.PostFormValue("login")
+        password := request.PostFormValue("password")
+
+        registerFeedback := &amp;RegisterFeedback{
+                LoginValue:    login,
+                PasswordValue: password,
+        }
+
+        checkingUser := database.GetUserByLogin(login)
+        if err := bcrypt.CompareHashAndPassword([]byte(checkingUser.HashPassword), []byte(password)); err != nil || password == "" </span><span class="cov0" title="0">{
+                registerFeedback.LoginFeedback = "Invalid login or password"
+                registerFeedback.PasswordFeedback = "Invalid login or password"
+                writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+                returnLogInFeedback(writer, registerFeedback)
+                return
+        }</span>
+
+        <span class="cov0" title="0">generateAndReturnToken(writer, login)
+        returnLogInFeedback(writer, registerFeedback)</span>
+}
+
+func RegisterHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        if err := registerTemplate.Execute(writer, nil); err != nil </span><span class="cov0" title="0">{
+                log.Printf("registerTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func returnRegisterFeedback(writer http.ResponseWriter, registerFeedback *RegisterFeedback) <span class="cov0" title="0">{
+        if err := registerFeedbackTemplate.Execute(writer, registerFeedback); err != nil </span><span class="cov0" title="0">{
+                log.Printf("registerFeedbackTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+        }</span>
+}
+
+func ConfirmRegistrationHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        name := request.PostFormValue("name")
+        login := request.PostFormValue("login")
+        password := request.PostFormValue("password")
+        repeatPassword := request.PostFormValue("repeat_password")
+
+        registerFeedback := &amp;RegisterFeedback{
+                NameValue:           name,
+                LoginValue:          login,
+                PasswordValue:       password,
+                RepeatPasswordValue: repeatPassword,
+        }
+
+        if name == "" </span><span class="cov0" title="0">{
+                registerFeedback.NameFeedback = "Please provide a valid name"
+        }</span>
+        <span class="cov0" title="0">if password == "" </span><span class="cov0" title="0">{
+                registerFeedback.PasswordFeedback = "Please provide a valid password"
+        }</span>
+        <span class="cov0" title="0">if repeatPassword == "" </span><span class="cov0" title="0">{
+                registerFeedback.RepeatPasswordFeedback = "Please provide a valid password"
+        }</span>
+        <span class="cov0" title="0">if password != "" &amp;&amp; repeatPassword != "" &amp;&amp; password != repeatPassword </span><span class="cov0" title="0">{
+                registerFeedback.PasswordFeedback = "Password mismatch"
+                registerFeedback.RepeatPasswordFeedback = "Password mismatch"
+        }</span>
+        <span class="cov0" title="0">if login == "" </span><span class="cov0" title="0">{
+                registerFeedback.LoginFeedback = "Please provide a valid login"
+                writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+                returnRegisterFeedback(writer, registerFeedback)
+                return
+        }</span>
+
+        <span class="cov0" title="0">checkingUser := database.GetUserByLogin(login)
+        if checkingUser.Login != "" </span><span class="cov0" title="0">{
+                registerFeedback.LoginFeedback = "User with such login already exists"
+                writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+                returnRegisterFeedback(writer, registerFeedback)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if registerFeedback.NameFeedback != "" || registerFeedback.PasswordFeedback != "" || password != repeatPassword </span><span class="cov0" title="0">{
+                writer.WriteHeader(http.StatusNonAuthoritativeInfo)
+                returnRegisterFeedback(writer, registerFeedback)
+                return
+        }</span>
+
+        <span class="cov0" title="0">hashPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("error while hashing password: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">database.InsertUser(&amp;user.User{Login: login, Name: name, HashPassword: string(hashPassword)})
+        database.InsertDefaultOperationTimes(login)
+        generateAndReturnToken(writer, login)
+        returnRegisterFeedback(writer, registerFeedback)</span>
+}
+
+func LogOutHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        http.SetCookie(writer, &amp;http.Cookie{
+                Name:   "Authorization",
+                MaxAge: -1,
+        })
+        http.Redirect(writer, request, "/", http.StatusSeeOther)
+}</span>
+
+func InputExpressionHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("InputExpressionHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := inputExpressionTemplate.Execute(writer, InputExpressionPageInfo{
+                UserName:    currentUser.Name,
+                Expressions: database.GetLastExpressions(currentUser.Login),
+        }); err != nil </span><span class="cov0" title="0">{
+                log.Printf("inputExpressionTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("AddExpressionHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">input := request.PostFormValue("expression")
+        exp := expression.New(currentUser.Login, input)
+        operationsTime, err := database.GetOperationsTime(currentUser.Login)
+        if err == nil </span><span class="cov0" title="0">{
+                exp.OperationsTimes = operationsTime
+        }</span>
+        <span class="cov0" title="0">if exp.Status == "" </span><span class="cov0" title="0">{
+                exp.Status = "in queue"
+        }</span>
+        <span class="cov0" title="0">database.InsertExpression(&amp;exp)
+        if exp.Status == "in queue" </span><span class="cov0" title="0">{
+                workers.ExpressionsChan &lt;- exp
+        }</span>
+
+        <span class="cov0" title="0">if err := inputListTemplate.Execute(writer, database.GetLastExpressions(currentUser.Login)); err != nil </span><span class="cov0" title="0">{
+                log.Printf("inputExpressionTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func ListExpressionsHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("ListExpressionsHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">searchId := request.URL.Query().Get("id")
+        exps := database.GetExpressionsById(searchId, currentUser.Login)
+        // TODO: create struct
+        if err := listExpressionsTemplate.Execute(writer, struct {
+                UserName string
+                Exps     []*expression.Expression
+                SearchId string
+        }{
+                UserName: currentUser.Name,
+                Exps:     exps,
+                SearchId: searchId,
+        }); err != nil </span><span class="cov0" title="0">{
+                log.Printf("inputExpressionTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func ConfigurationHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("ConfigurationHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">operationsTimes, err := database.GetOperationsTime(currentUser.Login)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+        }</span>
+
+        <span class="cov0" title="0">if err := configurationTemplate.Execute(writer, struct {
+                UserName       string
+                OperationsTime map[string]uint64
+        }{
+                UserName:       currentUser.Name,
+                OperationsTime: operationsTimes,
+        }); err != nil </span><span class="cov0" title="0">{
+                log.Printf("inputExpressionTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func ChangeConfigurationHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("ChangeConfigurationHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">timePlus, _ := strconv.ParseUint(request.PostFormValue("time-plus"), 10, 64)
+        timeMinus, _ := strconv.ParseUint(request.PostFormValue("time-minus"), 10, 64)
+        timeMultiply, _ := strconv.ParseUint(request.PostFormValue("time-multiply"), 10, 64)
+        timeDivide, _ := strconv.ParseUint(request.PostFormValue("time-divide"), 10, 64)
+
+        database.UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide, currentUser.Login)</span>
+}
+
+func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request) <span class="cov0" title="0">{
+        contextUser := request.Context().Value(keyUserString)
+        currentUser, ok := contextUser.(user.User)
+        if !ok </span><span class="cov0" title="0">{
+                log.Printf("ComputingResourcesHandler: expected: user, but found: %v\n", reflect.TypeOf(contextUser))
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := computingResourcesTemplate.Execute(writer, struct {
+                UserName string
+                Workers  []*workers.Worker
+        }{
+                UserName: currentUser.Name,
+                Workers:  workers.Workers,
+        }); err != nil </span><span class="cov0" title="0">{
+                log.Printf("inputExpressionTemplate error: %v\n", err)
+                http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                return
+        }</span>
+}
+
+func ConfigureControllers(router *mux.Router) <span class="cov0" title="0">{
+        router.Use(RecoverMiddleware)
+        router.HandleFunc("/", CheckingTokenBeforeLoginMiddleWare(LogInHandler)).Methods("GET")
+        router.HandleFunc("/login/confirm", ConfirmLogInHandler).Methods("POST")
+        router.HandleFunc("/register", CheckingTokenBeforeLoginMiddleWare(RegisterHandler)).Methods("GET")
+        router.HandleFunc("/register/confirm", ConfirmRegistrationHandler).Methods("POST")
+        router.HandleFunc("/log-out", LogOutHandler).Methods("GET")
+        router.HandleFunc("/input-expression", CheckingTokenAfterLoginMiddleWare(InputExpressionHandler)).Methods("GET")
+        router.HandleFunc("/add-expression", CheckingTokenAfterLoginMiddleWare(AddExpressionHandler)).Methods("POST")
+        router.HandleFunc("/list-expressions", CheckingTokenAfterLoginMiddleWare(ListExpressionsHandler)).Methods("GET")
+        router.HandleFunc("/configuration", CheckingTokenAfterLoginMiddleWare(ConfigurationHandler)).Methods("GET")
+        router.HandleFunc("/configuration/change", CheckingTokenAfterLoginMiddleWare(ChangeConfigurationHandler)).Methods("PUT")
+        router.HandleFunc("/computing-resources", CheckingTokenAfterLoginMiddleWare(ComputingResourcesHandler)).Methods("GET")
+
+        fileServer := http.FileServer(http.Dir("./static"))
+        router.PathPrefix("/static/").Handler(http.StripPrefix("/static", fileServer))
+
+        log.Println("Starting server at port :8080")
+        log.Fatal(http.ListenAndServe(":8080", router))
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package controllers
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "log"
+        "net/http"
+        "time"
+
+        "github.com/LLIEPJIOK/calculating-server/internal/database"
+        "github.com/LLIEPJIOK/calculating-server/internal/user"
+        "github.com/golang-jwt/jwt/v5"
+)
+
+func RecoverMiddleware(next http.Handler) http.Handler <span class="cov0" title="0">{
+        return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) </span><span class="cov0" title="0">{
+                defer func() </span><span class="cov0" title="0">{
+                        if err := recover(); err != nil </span><span class="cov0" title="0">{
+                                http.Error(writer, fmt.Sprintf("panic: %v", err), http.StatusInternalServerError)
+                                log.Println("recovering from panic:", err)
+                        }</span>
+                }()
+                <span class="cov0" title="0">next.ServeHTTP(writer, request)</span>
+        })
+}
+
+func getUserFromTokenString(tokenString string) (user.User, error) <span class="cov0" title="0">{
+        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) </span><span class="cov0" title="0">{
+                if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+                }</span>
+
+                <span class="cov0" title="0">return []byte(secretString), nil</span>
+        })
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return user.User{}, fmt.Errorf("error parsing token: %v", err)
+        }</span>
+        <span class="cov0" title="0">if !token.Valid </span><span class="cov0" title="0">{
+                return user.User{}, fmt.Errorf("token is invalid: %#v", token)
+        }</span>
+        <span class="cov0" title="0">claims, ok := token.Claims.(jwt.MapClaims)
+        if !ok </span><span class="cov0" title="0">{
+                return user.User{}, fmt.Errorf("cannot cast token claim to MapClaims")
+        }</span>
+        <span class="cov0" title="0">if float64(time.Now().Unix()) &gt; claims["exp"].(float64) </span><span class="cov0" title="0">{
+                return user.User{}, fmt.Errorf("token is expired")
+        }</span>
+
+        <span class="cov0" title="0">currentUser := database.GetUserByLogin(claims["login"].(string))
+        if currentUser.Login == "" </span><span class="cov0" title="0">{
+                return user.User{}, fmt.Errorf("token is invalid: %#v", token)
+        }</span>
+
+        <span class="cov0" title="0">return currentUser, nil</span>
+}
+
+func CheckingTokenBeforeLoginMiddleWare(next http.HandlerFunc) http.HandlerFunc <span class="cov0" title="0">{
+        return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) </span><span class="cov0" title="0">{
+                cookie, err := request.Cookie("Authorization")
+                if errors.Is(http.ErrNoCookie, err) </span><span class="cov0" title="0">{
+                        next.ServeHTTP(writer, request)
+                        return
+                }</span>
+                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("getting cookie error: %v\n", err)
+                        http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">tokenString := cookie.Value
+                currentUser, err := getUserFromTokenString(tokenString)
+                if err != nil </span><span class="cov0" title="0">{
+                        http.SetCookie(writer, &amp;http.Cookie{
+                                Name:   "Authorization",
+                                MaxAge: -1,
+                        })
+                        next.ServeHTTP(writer, request)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">ctx := context.WithValue(request.Context(), keyUserString, currentUser)
+                http.Redirect(writer, request.WithContext(ctx), "/input-expression", http.StatusSeeOther)</span>
+        })
+}
+
+func CheckingTokenAfterLoginMiddleWare(next http.HandlerFunc) http.HandlerFunc <span class="cov0" title="0">{
+        return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) </span><span class="cov0" title="0">{
+                cookie, err := request.Cookie("Authorization")
+                if errors.Is(http.ErrNoCookie, err) </span><span class="cov0" title="0">{
+                        http.Redirect(writer, request, "/", http.StatusSeeOther)
+                        return
+                }</span>
+                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        log.Printf("getting cookie error: %v\n", err)
+                        http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">tokenString := cookie.Value
+                currentUser, err := getUserFromTokenString(tokenString)
+                if err != nil </span><span class="cov0" title="0">{
+                        http.SetCookie(writer, &amp;http.Cookie{
+                                Name:   "Authorization",
+                                MaxAge: -1,
+                        })
+                        http.Redirect(writer, request, "/", http.StatusSeeOther)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">ctx := context.WithValue(request.Context(), keyUserString, currentUser)
+                next.ServeHTTP(writer, request.WithContext(ctx))</span>
+        })
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package database
+
+import (
+        "database/sql"
+        "fmt"
+        "log"
+
+        _ "github.com/lib/pq"
+)
+
+const (
+        host             = "localhost"
+        port             = 5432
+        databaseUser     = "postgres"
+        password         = "123409874567"
+        ExpressionDBName = "expressions_db"
+        OperationTimeDB  = "operation_time_db"
+)
+
+var (
+        dataBase *sql.DB
+)
+
+func createDatabaseIfNotExists() <span class="cov0" title="0">{
+        connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
+                host, port, databaseUser, password)
+        dataBase, err := sql.Open("postgres", connStr)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error open database:", err)
+        }</span>
+        <span class="cov0" title="0">defer dataBase.Close()
+        if err = dataBase.Ping(); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error connecting to database:", err)
+        }</span>
+
+        <span class="cov0" title="0">var exists bool
+        err = dataBase.QueryRow(`
+                SELECT EXISTS (
+                        SELECT 1 
+                        FROM pg_database 
+                        WHERE datname = $1
+        )`, ExpressionDBName).Scan(&amp;exists)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error checking database existence:", err)
+        }</span>
+
+        <span class="cov0" title="0">if !exists </span><span class="cov0" title="0">{
+                _, err = dataBase.Exec(`CREATE DATABASE ` + ExpressionDBName)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal("error creating database:", err)
+                }</span>
+        }
+}
+
+func createTablesIfNotExists() <span class="cov0" title="0">{
+        createUsersTableIfNotExists()
+        createExpressionTableIfNotExists()
+        createOperationsTimeTableIfNotExists()
+}</span>
+
+func Close() <span class="cov0" title="0">{
+        dataBase.Close()
+}</span>
+
+func Configure() <span class="cov0" title="0">{
+        createDatabaseIfNotExists()
+
+        connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+                host, port, databaseUser, password, ExpressionDBName)
+        var err error
+        dataBase, err = sql.Open("postgres", connectionString)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error open database:", err)
+        }</span>
+        <span class="cov0" title="0">if err = dataBase.Ping(); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error connecting to database:", err)
+        }</span>
+
+        <span class="cov0" title="0">createTablesIfNotExists()</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package database
+
+import (
+        "database/sql"
+        "fmt"
+        "log"
+
+        "github.com/LLIEPJIOK/calculating-server/internal/expression"
+        _ "github.com/lib/pq"
+)
+
+func rowsToExpressionsSlice(rows *sql.Rows) []*expression.Expression <span class="cov0" title="0">{
+        var expressions []*expression.Expression
+        for rows.Next() </span><span class="cov0" title="0">{
+                var exp expression.Expression
+                err := rows.Scan(&amp;exp.Login, &amp;exp.Id, &amp;exp.Exp, &amp;exp.Result, &amp;exp.Status, &amp;exp.CreationTime, &amp;exp.CalculationTime)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Println("error in getting data from database:", err)
+                        return nil
+                }</span>
+                <span class="cov0" title="0">expressions = append(expressions, &amp;exp)</span>
+        }
+
+        <span class="cov0" title="0">if err := rows.Err(); err != nil </span><span class="cov0" title="0">{
+                log.Println("error in getting data from database:", err)
+                return nil
+        }</span>
+        <span class="cov0" title="0">return expressions</span>
+}
+
+func getMaxExpressionId(userLogin string) (uint64, error) <span class="cov0" title="0">{
+        var maxId uint64
+        err := dataBase.QueryRow(`
+                SELECT 
+                        COALESCE(MAX(id), 0)
+                FROM "Expression"
+                WHERE user_login = $1
+                `, userLogin).Scan(&amp;maxId)
+        if err != nil </span><span class="cov0" title="0">{
+                return 0, fmt.Errorf("error getting max id where user_login = %v: %v", userLogin, err)
+        }</span>
+        <span class="cov0" title="0">return maxId, nil</span>
+}
+
+func InsertExpression(exp *expression.Expression) <span class="cov0" title="0">{
+        prevId, err := getMaxExpressionId(exp.Login)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">exp.Id = prevId + 1
+        _, err = dataBase.Exec(`
+                INSERT INTO "Expression"(user_login, id, exp, result, status, creation_time, calculation_time) 
+                VALUES($1, $2, $3, $4, $5, $6, $7)
+                `, exp.Login, exp.Id, exp.Exp, exp.Result, exp.Status, exp.CreationTime, exp.CalculationTime)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("error in insert %#v in database: %v\n", *exp, err)
+                return
+        }</span>
+}
+
+func GetExpressionsById(id string, userLogin string) []*expression.Expression <span class="cov0" title="0">{
+        rows, err := dataBase.Query(`
+                SELECT 
+                        user_login, id, exp, result, status, creation_time, calculation_time
+                FROM "Expression"
+                WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%' and user_login = $2
+                ORDER BY id ASC
+                `, id, userLogin)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("error in getting data from database:", err)
+                return nil
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        return rowsToExpressionsSlice(rows)</span>
+}
+
+func GetUncalculatingExpressions() []*expression.Expression <span class="cov0" title="0">{
+        rows, err := dataBase.Query(`
+                SELECT
+                        user_login, id, exp, result, status, creation_time, calculation_time
+                FROM "Expression"
+                WHERE status = 'calculating' OR status = 'in queue'
+                `)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println(err)
+                return nil
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        return rowsToExpressionsSlice(rows)</span>
+}
+
+func UpdateExpressionStatus(exp *expression.Expression) <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                UPDATE "Expression"
+                SET status = $1 
+                WHERE id = $2 and user_login = $3
+                `, exp.Status, exp.Id, exp.Login)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("error in updating %#v in database: %v\n", *exp, err)
+        }</span>
+}
+
+func UpdateExpressionResult(exp *expression.Expression) <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                UPDATE "Expression"
+                SET result = $1, calculation_time = $2
+                WHERE id = $3 and user_login = $4`,
+                exp.Result, exp.CalculationTime, exp.Id, exp.Login)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("error in updating %#v in database: %v\n", *exp, err)
+        }</span>
+}
+
+func GetLastExpressions(userLogin string) []*expression.Expression <span class="cov0" title="0">{
+        rows, err := dataBase.Query(`
+                SELECT 
+                        user_login, id, exp, result, status, creation_time, calculation_time
+                FROM "Expression"
+                WHERE user_login = $1
+                ORDER BY creation_time DESC 
+                LIMIT 10
+                `, userLogin)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("error in getting data from database:", err)
+                return nil
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        return rowsToExpressionsSlice(rows)</span>
+}
+
+func createExpressionTableIfNotExists() <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                CREATE TABLE IF NOT EXISTS "Expression" (
+                        user_login TEXT REFERENCES "User"(login),
+                        id INT,
+                        exp TEXT,
+                        result NUMERIC,
+                        status TEXT,
+                        creation_time TIMESTAMP,
+                        calculation_time TIMESTAMP,
+                        PRIMARY KEY (user_login, id)
+                )`)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error creating expression table:", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package database
+
+import (
+        "fmt"
+        "log"
+
+        _ "github.com/lib/pq"
+)
+
+func GetOperationTime(operation, userLogin string) uint64 <span class="cov0" title="0">{
+        var time uint64
+        err := dataBase.QueryRow(`
+                SELECT * 
+                FROM "OperationsTime"
+                WHERE user_login = $1 and operation = $2
+                `, userLogin, operation).Scan(&amp;time)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("error getting data from database:", err)
+                return 200
+        }</span>
+        <span class="cov0" title="0">return time</span>
+}
+
+func GetOperationsTime(userLogin string) (map[string]uint64, error) <span class="cov0" title="0">{
+        rows, err := dataBase.Query(`
+                SELECT
+                        operation, time
+                FROM "OperationsTime"
+                WHERE user_login = $1
+                `, userLogin)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error getting data from database: %v", err)
+        }</span>
+
+        <span class="cov0" title="0">operationTimes := make(map[string]uint64)
+        for rows.Next() </span><span class="cov0" title="0">{
+                var operation string
+                var time uint64
+                err := rows.Scan(&amp;operation, &amp;time)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("error getting operations time: %v", err)
+                }</span>
+                <span class="cov0" title="0">operationTimes[operation] = time</span>
+        }
+        <span class="cov0" title="0">if err := rows.Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error getting operations time: %v", err)
+        }</span>
+        <span class="cov0" title="0">return operationTimes, nil</span>
+}
+
+func InsertDefaultOperationTimes(userLogin string) <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                INSERT INTO "OperationsTime"(user_login, operation, time)
+                VALUES 
+                        ($1, 'time-plus', 200),
+                        ($1, 'time-minus', 200),
+                        ($1, 'time-multiply', 200),
+                        ($1, 'time-divide', 200);
+                `, userLogin)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error inserting default operations time:", err)
+        }</span>
+}
+
+func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide uint64, userLogin string) <span class="cov0" title="0">{
+        operationTimes := map[string]uint64{
+                "time-plus":     timePlus,
+                "time-minus":    timeMinus,
+                "time-multiply": timeMultiply,
+                "time-divide":   timeDivide,
+        }
+        for operation, time := range operationTimes </span><span class="cov0" title="0">{
+                _, err := dataBase.Exec(`
+                        UPDATE "OperationsTime"
+                        SET time = $1
+                        WHERE operation = $2 and user_login = $3
+                        `, time, operation, userLogin)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal("error updating operation:", err)
+                }</span>
+        }
+}
+
+func createOperationsTimeTableIfNotExists() <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                CREATE TABLE IF NOT EXISTS "OperationsTime" (
+                        user_login TEXT REFERENCES "User"(login),
+                        operation TEXT,
+                        time INT,
+                        PRIMARY KEY (user_login, operation)
+                )`)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error creating OperationsTime table:", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package database
+
+import (
+        "log"
+
+        "github.com/LLIEPJIOK/calculating-server/internal/user"
+        _ "github.com/lib/pq"
+)
+
+func InsertUser(insertingUser *user.User) <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                INSERT INTO "User"(login, name, hash_password) 
+                VALUES($1, $2, $3)
+                `, insertingUser.Login, insertingUser.Name, insertingUser.HashPassword)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Printf("error in insert %#v in database: %v\n", *insertingUser, err)
+                return
+        }</span>
+}
+
+func GetUserByLogin(login string) user.User <span class="cov0" title="0">{
+        var gettingUser user.User
+        dataBase.QueryRow(`
+                SELECT
+                        login, name, hash_password 
+                FROM "User"
+                WHERE login = $1`, login).Scan(&amp;gettingUser.Login, &amp;gettingUser.Name, &amp;gettingUser.HashPassword)
+
+        return gettingUser
+}</span>
+
+func createUsersTableIfNotExists() <span class="cov0" title="0">{
+        _, err := dataBase.Exec(`
+                CREATE TABLE IF NOT EXISTS "User" (
+                        login TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        hash_password TEXT NOT NULL
+                )`)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error creating users table:", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package expression
+
+import (
+        "fmt"
+        "strconv"
+        "strings"
+        "time"
+)
+
+type Expression struct {
+        Login           string
+        Id              uint64
+        Exp             string
+        Result          float64
+        Status          string
+        CreationTime    time.Time
+        CalculationTime time.Time
+        OperationsTimes map[string]uint64
+        rpn             []interface{}
+}
+
+func New(login, exp string) Expression <span class="cov8" title="1">{
+        expression := Expression{
+                Login:        login,
+                Exp:          exp,
+                CreationTime: time.Now(),
+                OperationsTimes: map[string]uint64{
+                        "time-plus":     200,
+                        "time-minus":    200,
+                        "time-multiply": 200,
+                        "time-divide":   200,
+                },
+        }
+        expression.Parse()
+        return expression
+}</span>
+
+func isDigit(ch uint8) bool <span class="cov8" title="1">{
+        return ch &gt;= '0' &amp;&amp; ch &lt;= '9'
+}</span>
+
+// parsing to reverse polish notation
+func (exp *Expression) Parse() <span class="cov8" title="1">{
+        st := make([]uint8, 0)
+        var prevChar uint8 = '('
+        bracketsCnt := 0
+        for i := 0; i &lt; len(exp.Exp); i++ </span><span class="cov8" title="1">{
+                ch := exp.Exp[i]
+                if isDigit(ch) </span><span class="cov8" title="1">{
+                        if isDigit(prevChar) </span><span class="cov8" title="1">{
+                                exp.Status = "invalid expression: two numbers in a row"
+                                return
+                        }</span>
+                        <span class="cov8" title="1">length := strings.IndexAny(exp.Exp[i:], "-+*/() \t")
+                        if length == -1 </span><span class="cov8" title="1">{
+                                length = len(exp.Exp) - i
+                        }</span>
+                        <span class="cov8" title="1">numb, err := strconv.ParseFloat(exp.Exp[i:i+length], 64)
+                        if err != nil </span><span class="cov8" title="1">{
+                                exp.Status = fmt.Sprintf("invalid expression: %v", err)
+                                return
+                        }</span>
+                        <span class="cov8" title="1">exp.rpn = append(exp.rpn, numb)
+                        i += length - 1</span>
+                } else<span class="cov8" title="1"> if ch == '(' </span><span class="cov8" title="1">{
+                        if prevChar == ')' </span><span class="cov8" title="1">{
+                                exp.Status = "invalid expression: incorrect placement of brackets"
+                                return
+                        }</span>
+                        <span class="cov8" title="1">bracketsCnt++
+                        st = append(st, ch)</span>
+                } else<span class="cov8" title="1"> if ch == ')' </span><span class="cov8" title="1">{
+                        for len(st) != 0 &amp;&amp; st[len(st)-1] != '(' </span><span class="cov8" title="1">{
+                                exp.rpn = append(exp.rpn, st[len(st)-1])
+                                st = st[:len(st)-1]
+                        }</span>
+                        <span class="cov8" title="1">if len(st) == 0 || !isDigit(prevChar) </span><span class="cov8" title="1">{
+                                exp.Status = "invalid expression: incorrect placement of brackets"
+                                return
+                        }</span>
+                        <span class="cov8" title="1">bracketsCnt--
+                        st = st[:len(st)-1]</span>
+                } else<span class="cov8" title="1"> if strings.Contains(" \t", string(ch)) </span><span class="cov8" title="1">{
+                        continue</span>
+                } else<span class="cov8" title="1"> if !strings.Contains("-+*/()", string(ch)) </span><span class="cov8" title="1">{
+                        exp.Status = fmt.Sprintf("invalid expression: unknown math symbol: %c", ch)
+                        return
+                }</span> else<span class="cov8" title="1"> {
+                        if !isDigit(prevChar) &amp;&amp; !(prevChar == '(' &amp;&amp; (ch == '-' || ch == '+')) </span><span class="cov8" title="1">{
+                                exp.Status = "invalid expression: incorrect placement of operations"
+                                return
+                        }</span>
+                        <span class="cov8" title="1">if len(st) != 0 </span><span class="cov8" title="1">{
+                                for len(st) != 0 </span><span class="cov8" title="1">{
+                                        top := st[len(st)-1]
+                                        if top == '(' || ((top == '-' || top == '+') &amp;&amp; (ch == '*' || ch == '/')) </span><span class="cov8" title="1">{
+                                                break</span>
+                                        }
+                                        <span class="cov8" title="1">exp.rpn = append(exp.rpn, top)
+                                        st = st[:len(st)-1]</span>
+                                }
+                        }
+                        <span class="cov8" title="1">if prevChar == '(' &amp;&amp; (ch == '-' || ch == '+') </span><span class="cov8" title="1">{
+                                if ch == '-' </span><span class="cov8" title="1">{
+                                        st = append(st, '_')
+                                }</span>
+                        } else<span class="cov8" title="1"> {
+                                st = append(st, ch)
+                        }</span>
+                }
+                <span class="cov8" title="1">prevChar = ch</span>
+        }
+        <span class="cov8" title="1">for len(st) != 0 </span><span class="cov8" title="1">{
+                exp.rpn = append(exp.rpn, st[len(st)-1])
+                st = st[:len(st)-1]
+        }</span>
+        <span class="cov8" title="1">if len(exp.rpn) == 0 </span><span class="cov8" title="1">{
+                exp.Status = "invalid expression: empty expression"
+                return
+        }</span> else<span class="cov8" title="1"> if bracketsCnt != 0 </span><span class="cov8" title="1">{
+                exp.Status = "invalid expression: incorrect placement of brackets"
+                return
+        }</span> else<span class="cov8" title="1"> if !isDigit(prevChar) &amp;&amp; prevChar != ')' </span><span class="cov8" title="1">{
+                exp.Status = "invalid expression: incorrect placement of operations"
+                return
+        }</span>
+}
+
+// calculation from reverse polish notation
+func (exp *Expression) Calculate() <span class="cov8" title="1">{
+        st := make([]float64, 0)
+        for _, v := range exp.rpn </span><span class="cov8" title="1">{
+                if numb, ok := v.(float64); ok </span><span class="cov8" title="1">{
+                        st = append(st, numb)
+                }</span> else<span class="cov8" title="1"> {
+                        switch v.(uint8) </span>{
+                        case '_':<span class="cov8" title="1">
+                                st[len(st)-1] = multiply(st[len(st)-1], -1, exp.OperationsTimes["time-multiply"])</span>
+                        case '-':<span class="cov8" title="1">
+                                st[len(st)-2] = minus(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-minus"])
+                                st = st[:len(st)-1]</span>
+                        case '+':<span class="cov8" title="1">
+                                st[len(st)-2] = add(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-plus"])
+                                st = st[:len(st)-1]</span>
+                        case '*':<span class="cov8" title="1">
+                                st[len(st)-2] = multiply(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-multiply"])
+                                st = st[:len(st)-1]</span>
+                        case '/':<span class="cov8" title="1">
+                                if st[len(st)-1] == 0 </span><span class="cov8" title="1">{
+                                        exp.Status = "invalid expression: division by zero"
+                                        return
+                                }</span>
+                                <span class="cov8" title="1">st[len(st)-2] = divide(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-divide"])
+                                st = st[:len(st)-1]</span>
+                        }
+                }
+        }
+        <span class="cov8" title="1">exp.CalculationTime = time.Now()
+        exp.Status = "calculated"
+        exp.Result = st[0]</span>
+}
+
+func (exp Expression) String() string <span class="cov0" title="0">{
+        str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation time: `%s`, Status: `%s`",
+                exp.Id, exp.Exp, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
+        if exp.Status == "calculated" </span><span class="cov0" title="0">{
+                str += fmt.Sprintf(",  Result: `%v`, Calculation time: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
+        }</span>
+        <span class="cov0" title="0">return str</span>
+}
+
+func add(a, b float64, seconds uint64) float64 <span class="cov8" title="1">{
+        time.Sleep(time.Duration(seconds) * time.Millisecond)
+        return a + b
+}</span>
+
+func minus(a, b float64, seconds uint64) float64 <span class="cov8" title="1">{
+        time.Sleep(time.Duration(seconds) * time.Millisecond)
+        return a - b
+}</span>
+
+func multiply(a, b float64, seconds uint64) float64 <span class="cov8" title="1">{
+        time.Sleep(time.Duration(seconds) * time.Millisecond)
+        return a * b
+}</span>
+
+func divide(a, b float64, seconds uint64) float64 <span class="cov8" title="1">{
+        time.Sleep(time.Duration(seconds) * time.Millisecond)
+        return a / b
+}</span>
+
+func GetOperationTime(operationsTime map[string]uint64, operation string) uint64 <span class="cov0" title="0">{
+        return operationsTime[operation]
+}</span>
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package workers
+
+import (
+        "fmt"
+        "sync"
+        "time"
+
+        "github.com/LLIEPJIOK/calculating-server/internal/database"
+        "github.com/LLIEPJIOK/calculating-server/internal/expression"
+)
+
+var (
+        ExpressionsChan = make(chan expression.Expression, 1000)
+        numberOfWorkers = 10
+        Workers         = make([]*Worker, numberOfWorkers)
+)
+
+type Worker struct {
+        LastPing time.Time
+        Status   string
+        Id       int
+        Mutex    sync.RWMutex
+}
+
+func (threadInfo *Worker) UpdateStatus(newStatus string) <span class="cov0" title="0">{
+        threadInfo.Mutex.Lock()
+        defer threadInfo.Mutex.Unlock()
+        threadInfo.Status = newStatus
+        threadInfo.LastPing = time.Now()
+}</span>
+
+func (threadInfo *Worker) String() string <span class="cov0" title="0">{
+        threadInfo.Mutex.RLock()
+        defer threadInfo.Mutex.RUnlock()
+        return fmt.Sprintf(`Agent #%d: %s. Last ping: %v`, threadInfo.Id, threadInfo.Status, threadInfo.LastPing.Format("02.01.2006 15:04:05"))
+}</span>
+
+func (threadInfo *Worker) Run() <span class="cov0" title="0">{
+        ticker := time.NewTicker(5 * time.Second)
+        defer ticker.Stop()
+        for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ticker.C:<span class="cov0" title="0">
+                        threadInfo.UpdateStatus("Waiting for expression")</span>
+                case exp, ok := &lt;-ExpressionsChan:<span class="cov0" title="0">
+                        if !ok </span><span class="cov0" title="0">{
+                                threadInfo.UpdateStatus("Closed")
+                                return
+                        }</span>
+
+                        <span class="cov0" title="0">threadInfo.UpdateStatus(fmt.Sprintf("Calculation expression #%v", exp.Id))
+                        exp.Status = "calculating"
+                        database.UpdateExpressionStatus(&amp;exp)
+
+                        exp.Calculate()
+
+                        database.UpdateExpressionStatus(&amp;exp)
+                        database.UpdateExpressionResult(&amp;exp)
+                        threadInfo.UpdateStatus("Waiting for expression")</span>
+                }
+        }
+}
+
+func CloseExpressionsChan() <span class="cov0" title="0">{
+        close(ExpressionsChan)
+}</span>
+
+func Initialize() <span class="cov0" title="0">{
+        for i := range numberOfWorkers </span><span class="cov0" title="0">{
+                Workers[i] = &amp;Worker{
+                        LastPing: time.Now(),
+                        Status:   "Waiting for expression",
+                        Id:       i + 1,
+                }
+                go Workers[i].Run()
+        }</span>
+
+        <span class="cov0" title="0">expressions := database.GetUncalculatingExpressions()
+        for _, expression := range expressions </span><span class="cov0" title="0">{
+                expression.Parse()
+                ExpressionsChan &lt;- *expression
+        }</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

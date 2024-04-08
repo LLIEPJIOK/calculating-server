@@ -230,7 +230,7 @@ func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	input := request.PostFormValue("expression")
-	exp := expression.NewExpression(currentUser.Login, input)
+	exp := expression.New(currentUser.Login, input)
 	operationsTime, err := database.GetOperationsTime(currentUser.Login)
 	if err == nil {
 		exp.OperationsTimes = operationsTime

@@ -19,7 +19,7 @@ type Expression struct {
 	rpn             []interface{}
 }
 
-func NewExpression(login, exp string) Expression {
+func New(login, exp string) Expression {
 	expression := Expression{
 		Login:        login,
 		Exp:          exp,

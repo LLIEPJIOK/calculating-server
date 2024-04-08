@@ -32,7 +32,7 @@ func getMaxExpressionId(userLogin string) (uint64, error) {
 	var maxId uint64
 	err := dataBase.QueryRow(`
 		SELECT 
-			COALESCE(MAX(id), 0, MAX(id))
+			COALESCE(MAX(id), 0)
 		FROM "Expression"
 		WHERE user_login = $1
 		`, userLogin).Scan(&maxId)
