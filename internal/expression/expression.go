@@ -13,6 +13,7 @@ type Expression struct {
 	Exp             string
 	Result          float64
 	Status          string
+	Err             string
 	CreationTime    time.Time
 	CalculationTime time.Time
 	OperationsTimes map[string]uint64
@@ -48,7 +49,8 @@ func (exp *Expression) Parse() {
 		ch := exp.Exp[i]
 		if isDigit(ch) {
 			if isDigit(prevChar) {
-				exp.Status = "invalid expression: two numbers in a row"
+				exp.Status = "error"
+				exp.Err = "invalid expression: two numbers in a row"
 				return
 			}
 			length := strings.IndexAny(exp.Exp[i:], "-+*/() \t")
@@ -57,14 +59,16 @@ func (exp *Expression) Parse() {
 			}
 			numb, err := strconv.ParseFloat(exp.Exp[i:i+length], 64)
 			if err != nil {
-				exp.Status = fmt.Sprintf("invalid expression: %v", err)
+				exp.Status = "error"
+				exp.Err = fmt.Sprintf("invalid expression: %v", err)
 				return
 			}
 			exp.rpn = append(exp.rpn, numb)
 			i += length - 1
 		} else if ch == '(' {
 			if prevChar == ')' {
-				exp.Status = "invalid expression: incorrect placement of brackets"
+				exp.Status = "error"
+				exp.Err = "invalid expression: incorrect placement of parenthesis"
 				return
 			}
 			bracketsCnt++
@@ -74,8 +78,9 @@ func (exp *Expression) Parse() {
 				exp.rpn = append(exp.rpn, st[len(st)-1])
 				st = st[:len(st)-1]
 			}
-			if len(st) == 0 || !isDigit(prevChar) {
-				exp.Status = "invalid expression: incorrect placement of brackets"
+			if len(st) == 0 || !isDigit(prevChar) && prevChar != ')' {
+				exp.Status = "error"
+				exp.Err = "invalid expression: incorrect placement of parenthesis"
 				return
 			}
 			bracketsCnt--
@@ -83,11 +88,13 @@ func (exp *Expression) Parse() {
 		} else if strings.Contains(" \t", string(ch)) {
 			continue
 		} else if !strings.Contains("-+*/()", string(ch)) {
-			exp.Status = fmt.Sprintf("invalid expression: unknown math symbol: %c", ch)
+			exp.Status = "error"
+			exp.Err = fmt.Sprintf("invalid expression: unknown math symbol: %c", ch)
 			return
 		} else {
-			if !isDigit(prevChar) && !(prevChar == '(' && (ch == '-' || ch == '+')) {
-				exp.Status = "invalid expression: incorrect placement of operations"
+			if !isDigit(prevChar) && !(prevChar == '(' && (ch == '-' || ch == '+')) && prevChar != ')' {
+				exp.Status = "error"
+				exp.Err = "invalid expression: incorrect placement of operations"
 				return
 			}
 			if len(st) != 0 {
@@ -115,19 +122,25 @@ func (exp *Expression) Parse() {
 		st = st[:len(st)-1]
 	}
 	if len(exp.rpn) == 0 {
-		exp.Status = "invalid expression: empty expression"
+		exp.Status = "error"
+		exp.Err = "invalid expression: empty expression"
 		return
 	} else if bracketsCnt != 0 {
-		exp.Status = "invalid expression: incorrect placement of brackets"
+		exp.Status = "error"
+		exp.Err = "invalid expression: incorrect placement of parenthesis"
 		return
 	} else if !isDigit(prevChar) && prevChar != ')' {
-		exp.Status = "invalid expression: incorrect placement of operations"
+		exp.Status = "error"
+		exp.Err = "invalid expression: incorrect placement of operations"
 		return
 	}
 }
 
 // calculation from reverse polish notation
 func (exp *Expression) Calculate() {
+	if exp.Status == "error" {
+		return
+	}
 	st := make([]float64, 0)
 	for _, v := range exp.rpn {
 		if numb, ok := v.(float64); ok {
@@ -147,7 +160,8 @@ func (exp *Expression) Calculate() {
 				st = st[:len(st)-1]
 			case '/':
 				if st[len(st)-1] == 0 {
-					exp.Status = "invalid expression: division by zero"
+					exp.Status = "error"
+					exp.Err = "invalid expression: division by zero"
 					return
 				}
 				st[len(st)-2] = divide(st[len(st)-2], st[len(st)-1], exp.OperationsTimes["time-divide"])
@@ -162,7 +176,7 @@ func (exp *Expression) Calculate() {
 
 func (exp Expression) String() string {
 	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation time: `%s`, Status: `%s`",
-		exp.Id, exp.Exp, exp.CreationTime.Format("2006-01-02 15:04:05"), exp.Status)
+		exp.Id, exp.Exp, exp.CreationTime.Format("02.01.2006 15:04:05"), exp.Status)
 	if exp.Status == "calculated" {
 		str += fmt.Sprintf(",  Result: `%v`, Calculation time: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
 	}
