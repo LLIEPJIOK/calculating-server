@@ -30,27 +30,33 @@ func checkTableExistence(tableName string) (bool, error) {
 }
 
 func deleteDatabase() {
+	Close()
+
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
 		host, port, databaseUser, password)
 	db, err := sql.Open("postgres", connStr)
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error while closing database: %v\n", err)
+		}
+	}()
 	if err != nil {
 		log.Fatal("error open postgres:", err)
 	}
-	defer db.Close()
 	if err = db.Ping(); err != nil {
 		log.Fatal("error connecting to postgres:", err)
 	}
 
 	_ = db.QueryRow(`
-		DROP DATABASE "$1"
+		DELETE 
+			FROM pg_database 
+			WHERE datname = $1
 		`, expressionDatabaseName)
-
 }
 
 func TestConfiguration(t *testing.T) {
-	t.Parallel()
-	expressionDatabaseName = "test_db"
-	defer Close()
+	expressionDatabaseName = "configuration_test_db"
+	defer deleteDatabase()
 	for i := 0; i < 2; i++ {
 		Configure()
 
@@ -82,6 +88,4 @@ func TestConfiguration(t *testing.T) {
 			t.Fatalf("%v) OperationsTime table hasn't been created", i)
 		}
 	}
-
-	deleteDatabase()
 }

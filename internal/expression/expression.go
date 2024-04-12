@@ -36,6 +36,17 @@ func New(login, exp string) Expression {
 	return expression
 }
 
+func (exp *Expression) Equals(anotherExpression *Expression) bool {
+	return exp.Login == anotherExpression.Login &&
+		exp.Id == anotherExpression.Id &&
+		exp.Exp == anotherExpression.Exp &&
+		exp.Result == anotherExpression.Result &&
+		exp.Status == anotherExpression.Status &&
+		exp.Err == anotherExpression.Err &&
+		exp.CreationTime == anotherExpression.CreationTime &&
+		exp.CalculationTime == anotherExpression.CalculationTime
+}
+
 func isDigit(ch uint8) bool {
 	return ch >= '0' && ch <= '9'
 }

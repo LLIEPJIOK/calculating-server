@@ -250,6 +250,12 @@ func TestDivisionByZero(t *testing.T) {
 			expectedStatus: "error",
 			expectedErr:    "invalid expression: division by zero",
 		},
+		{
+			name:           "division by zero",
+			exp:            New("", "10 * 1 - 6 * (9 - 4) / (5 * (5 - 6) + 5)"),
+			expectedStatus: "error",
+			expectedErr:    "invalid expression: division by zero",
+		},
 	}
 
 	for _, testCase := range testCases {

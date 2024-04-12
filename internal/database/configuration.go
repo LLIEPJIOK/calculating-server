@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	host         = "db"
+	host         = "localhost"
 	port         = 5432
 	databaseUser = "postgres"
-	password     = "secret"
+	password     = "123409874567"
 )
 
 var (
@@ -60,7 +60,9 @@ func createTablesIfNotExists() {
 
 func Close() {
 	if dataBase != nil {
-		dataBase.Close()
+		if err := dataBase.Close(); err != nil {
+			log.Printf("error while closing database: %v\n", err)
+		}
 	}
 }
 
