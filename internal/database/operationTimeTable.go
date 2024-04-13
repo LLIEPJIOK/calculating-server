@@ -11,7 +11,7 @@ func GetOperationTime(operation, userLogin string) uint64 {
 	var time uint64
 	err := dataBase.QueryRow(`
 		SELECT * 
-		FROM "OperationsTime"
+		FROM "Operations_Time"
 		WHERE user_login = $1 and operation = $2
 		`, userLogin, operation).Scan(&time)
 	if err != nil {
@@ -25,7 +25,7 @@ func GetOperationsTime(userLogin string) (map[string]uint64, error) {
 	rows, err := dataBase.Query(`
 		SELECT
 			operation, time
-		FROM "OperationsTime"
+		FROM "Operations_Time"
 		WHERE user_login = $1
 		`, userLogin)
 	if err != nil {
@@ -50,7 +50,7 @@ func GetOperationsTime(userLogin string) (map[string]uint64, error) {
 
 func InsertDefaultOperationTimes(userLogin string) {
 	_, err := dataBase.Exec(`
-		INSERT INTO "OperationsTime"(user_login, operation, time)
+		INSERT INTO "Operations_Time"(user_login, operation, time)
 		VALUES 
 			($1, 'time-plus', 200),
 			($1, 'time-minus', 200),
@@ -71,7 +71,7 @@ func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide uint64, 
 	}
 	for operation, time := range operationTimes {
 		_, err := dataBase.Exec(`
-			UPDATE "OperationsTime"
+			UPDATE "Operations_Time"
 			SET time = $1
 			WHERE operation = $2 and user_login = $3
 			`, time, operation, userLogin)
@@ -83,13 +83,13 @@ func UpdateOperationTimes(timePlus, timeMinus, timeMultiply, timeDivide uint64, 
 
 func createOperationsTimeTableIfNotExists() {
 	_, err := dataBase.Exec(`
-		CREATE TABLE IF NOT EXISTS "OperationsTime" (
+		CREATE TABLE IF NOT EXISTS "Operations_Time" (
 			user_login TEXT REFERENCES "User"(login),
 			operation TEXT,
-			time INT,
+			time INT NOT NULL,
 			PRIMARY KEY (user_login, operation)
 		)`)
 	if err != nil {
-		log.Fatal("error creating OperationsTime table:", err)
+		log.Fatal("error creating Operations_Time table:", err)
 	}
 }

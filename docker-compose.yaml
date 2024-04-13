@@ -1,7 +1,7 @@
 services:
   app:
     build: ./
-    command: ./calculating-server
+    command: bash -c "go test -v ./internal/database/* && go test -v ./internal/expression/* && ./calculating-server"
     ports:
       - 8080:8080
     depends_on:
@@ -12,7 +12,7 @@ services:
 
   db:
     image: postgres:latest
-    restart: always
+    restart: on-failure
     volumes:
       - ./.database/postgres/data:/var/lib/postgresql/data
     environment:

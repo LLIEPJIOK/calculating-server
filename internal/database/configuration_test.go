@@ -81,7 +81,7 @@ func TestConfiguration(t *testing.T) {
 			t.Fatalf("%v) Expression table hasn't been created", i)
 		}
 
-		exists, err = checkTableExistence("OperationsTime")
+		exists, err = checkTableExistence("Operations_Time")
 		if err != nil {
 			t.Fatalf("%v) error while checking OperationsTime table existence: %v", i, err)
 		} else if !exists {

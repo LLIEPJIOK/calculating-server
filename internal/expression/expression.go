@@ -43,8 +43,8 @@ func (exp *Expression) Equals(anotherExpression *Expression) bool {
 		exp.Result == anotherExpression.Result &&
 		exp.Status == anotherExpression.Status &&
 		exp.Err == anotherExpression.Err &&
-		exp.CreationTime == anotherExpression.CreationTime &&
-		exp.CalculationTime == anotherExpression.CalculationTime
+		exp.CreationTime.Sub(anotherExpression.CreationTime).Abs() < time.Microsecond &&
+		exp.CalculationTime.Sub(anotherExpression.CalculationTime).Abs() < time.Microsecond
 }
 
 func isDigit(ch uint8) bool {

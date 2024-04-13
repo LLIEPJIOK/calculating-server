@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	host         = "localhost"
+	host         = "db"
 	port         = 5432
 	databaseUser = "postgres"
-	password     = "123409874567"
+	password     = "secret"
 )
 
 var (
@@ -22,9 +22,9 @@ var (
 )
 
 func createDatabaseIfNotExists() {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
+	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
 		host, port, databaseUser, password)
-	dataBase, err := sql.Open("postgres", connStr)
+	dataBase, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatal("error open postgres:", err)
 	}
