@@ -214,7 +214,7 @@ func TestExpressionTable(t *testing.T) {
 		},
 	}
 
-	expressionDatabaseName = "expression_test_db"
+	expressionDatabaseName = "expression_table_test_db"
 	Configure()
 	defer deleteDatabase()
 
