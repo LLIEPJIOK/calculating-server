@@ -7,20 +7,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func GetOperationTime(operation, userLogin string) uint64 {
-	var time uint64
-	err := dataBase.QueryRow(`
-		SELECT * 
-		FROM "Operations_Time"
-		WHERE user_login = $1 and operation = $2
-		`, userLogin, operation).Scan(&time)
-	if err != nil {
-		log.Println("error getting data from database:", err)
-		return 200
-	}
-	return time
-}
-
 func GetOperationsTime(userLogin string) (map[string]uint64, error) {
 	rows, err := dataBase.Query(`
 		SELECT

@@ -135,7 +135,6 @@ func TestExpressionSimple(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			testExpressionTestCase(t, testCase)
 		})
 	}
@@ -230,7 +229,6 @@ func TestExpressionSimpleErrors(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			testCase.exp.Calculate()
 			if testCase.expectedStatus != testCase.exp.Status {
 				t.Fatalf("status: expected: %v, but got: %v", testCase.expectedStatus, testCase.exp.Status)
@@ -260,7 +258,6 @@ func TestDivisionByZero(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			testCase.exp.Calculate()
 			if testCase.expectedStatus != testCase.exp.Status {
 				t.Fatalf("status: expected: %v, but got: %v", testCase.expectedStatus, testCase.exp.Status)
@@ -320,7 +317,6 @@ func TestExpression(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			testExpressionTestCase(t, testCase)
 		})
 	}
@@ -368,7 +364,6 @@ func TestExpressionErrors(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			if testCase.expectedStatus != testCase.exp.Status {
 				t.Fatalf("status: expected: %v, but got: %v", testCase.expectedStatus, testCase.exp.Status)
 			}
@@ -470,7 +465,6 @@ func TestExpressionCalculationTime(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
 			testCase.exp.Parse()
 			testExpressionTestCase(t, testCase)
 		})
