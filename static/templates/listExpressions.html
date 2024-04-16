@@ -94,11 +94,16 @@
         </div>
     </div>
     <div class="list">
-        <ul class="list-group fs-5" id="expression-list">
-            {{ range .Exps }}
-            <li class="list-group-item bg-primary text-white">{{ .String }}</li>
-            {{ end }}
-        </ul>
+        {{ range .Exps }}
+        <div class="d-flex bg-primary rounded-3 m-2 justify-content-between">
+            <div>
+                <div class="d-inline-block bg-white rounded-4 m-2 px-3 py-1">{{.Id}}</div>
+                <div class="d-inline-block text-white rounded-4 m-2 py-1">{{.Exp}} = {{.Result}}</div>
+            </div>
+            <img src="/static/resources/images/expressionStatuses/error.png" class="align-self-center mx-2" width="30px"
+                height="30px" title="Calculating...">
+        </div>
+        {{ end }}
     </div>
     {{ if ne .SearchId "" }}
     <form class="m-4">

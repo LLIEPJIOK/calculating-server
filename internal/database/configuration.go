@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	host         = "db"
+	host         = "localhost"
 	port         = 5432
 	databaseUser = "postgres"
-	password     = "secret"
+	password     = "123409874567"
 )
 
 var (
