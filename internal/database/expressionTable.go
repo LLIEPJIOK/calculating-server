@@ -66,7 +66,7 @@ func GetExpressionsById(id string, userLogin string) []*expression.Expression {
 			user_login, id, exp, result, status, err, creation_time, calculation_time
 		FROM "Expression"
 		WHERE CAST(id AS TEXT) LIKE '%' || $1 || '%' and user_login = $2
-		ORDER BY id ASC
+		ORDER BY creation_time DESC 
 		`, id, userLogin)
 	if err != nil {
 		log.Println("error in getting data from database:", err)

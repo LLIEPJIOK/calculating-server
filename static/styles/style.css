@@ -74,3 +74,13 @@
 .spinner-border {
     opacity: 0;
 }
+
+.expression-status {
+    border-radius: 50%;
+    padding: 3px;
+    background-color: white;
+}
+
+.bg-expression {
+    background-color: #6ca6fd;
+}

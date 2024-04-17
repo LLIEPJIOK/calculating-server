@@ -194,23 +194,23 @@ func (exp Expression) String() string {
 	return str
 }
 
-func add(a, b float64, seconds uint64) float64 {
-	time.Sleep(time.Duration(seconds) * time.Millisecond)
+func add(a, b float64, ms uint64) float64 {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return a + b
 }
 
-func minus(a, b float64, seconds uint64) float64 {
-	time.Sleep(time.Duration(seconds) * time.Millisecond)
+func minus(a, b float64, ms uint64) float64 {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return a - b
 }
 
-func multiply(a, b float64, seconds uint64) float64 {
-	time.Sleep(time.Duration(seconds) * time.Millisecond)
+func multiply(a, b float64, ms uint64) float64 {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return a * b
 }
 
-func divide(a, b float64, seconds uint64) float64 {
-	time.Sleep(time.Duration(seconds) * time.Millisecond)
+func divide(a, b float64, ms uint64) float64 {
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return a / b
 }
 
