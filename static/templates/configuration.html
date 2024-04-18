@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"
+        integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"></script>
     <title>Document</title>
 </head>
 
@@ -84,22 +86,22 @@
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
                     <input type="number" name="time-plus" class="form-control" min="0"
-                        value="{{ GetOperationTime .OperationsTime " time-plus" }}" />
+                        value="{{ GetOperationTime .OperationsTime "time-plus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-minus">- execution time (ms)</label>
                     <input type="number" name="time-minus" class="form-control" min="0"
-                        value="{{ GetOperationTime .OperationsTime  " time-minus" }}" />
+                        value="{{ GetOperationTime .OperationsTime  "time-minus" }}" />
                 </div>
                 <div class=" mb-2">
                     <label for="time-multiply">* execution time (ms)</label>
                     <input type="number" name="time-multiply" class="form-control" min="0"
-                        value="{{ GetOperationTime .OperationsTime  " time-multiply" }}" />
+                        value="{{ GetOperationTime .OperationsTime  "time-multiply" }}" />
                 </div>
                 <div class=" mb-3">
                     <label for="time-divide">/ execution time (ms)</label>
                     <input type="number" name="time-divide" class="form-control" min="0"
-                        value="{{ GetOperationTime .OperationsTime  " time-divide" }}" />
+                        value="{{ GetOperationTime .OperationsTime  "time-divide" }}" />
                 </div>
                 <div class="d-flex justify-content-center">
                     <button type="submit" class="btn btn-outline-light btn-submit-input">Apply</button>

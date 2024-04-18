@@ -90,7 +90,15 @@ func GetUncalculatingExpressions() []*expression.Expression {
 	}
 	defer rows.Close()
 
-	return rowsToExpressionsSlice(rows)
+	expressions := rowsToExpressionsSlice(rows)
+	for _, exp := range expressions {
+		exp.OperationsTimes, err = GetOperationsTime(exp.Login)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+	}
+	return expressions
 }
 
 func UpdateExpressionStatus(exp *expression.Expression) {

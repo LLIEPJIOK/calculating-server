@@ -1,3 +1,24 @@
 {{ range . }}
-<li class="list-group-item bg-primary text-white">{{ .String }}</li>
+<div class="d-flex bg-expression rounded-3 m-2 justify-content-between">
+    <div>
+        <div class="d-inline-block bg-white rounded-4 m-2 px-3 py-1">{{.Id}}</div>
+        <div class="d-inline-block text-white rounded-4 m-2 py-1">{{.Exp}} = {{.Result}}</div>
+    </div>
+    {{ if eq .Status "calculating" }}
+    <img src="/static/resources/images/expressionStatuses/calculating.png"
+        class="expression-status align-self-center mx-2" width="30px" height="30px" title="Calculating...">
+    {{ end }}
+    {{ if eq .Status "calculated" }}
+    <img src="/static/resources/images/expressionStatuses/ok.png" class="expression-status align-self-center mx-2"
+        width="30px" height="30px" title="Calculated">
+    {{ end }}
+    {{ if eq .Status "in queue" }}
+    <img src="/static/resources/images/expressionStatuses/inQueue.png"
+        class="expression-status align-self-center mx-2 p-0" width="30px" height="30px" title="In queue">
+    {{ end }}
+    {{ if eq .Status "error" }}
+    <img src="/static/resources/images/expressionStatuses/error.png" class="expression-status align-self-center mx-2"
+        width="30px" height="30px" title="Error">
+    {{ end }}
+</div>
 {{ end }}
