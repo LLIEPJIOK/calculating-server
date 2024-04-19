@@ -88,14 +88,15 @@
     <div class="d-flex justify-content-between">
         <div class="list" id="input-list">
             {{ range .Expressions }}
-            <div class="d-flex bg-expression rounded-3 m-2 justify-content-between">
+            <div class="d-flex bg-expression rounded-3 m-2 mt-0 justify-content-between">
                 <div>
                     <div class="d-inline-block bg-white rounded-4 m-2 px-3 py-1">{{.Id}}</div>
                     <div class="d-inline-block text-white rounded-4 m-2 py-1">{{.Exp}} = {{.Result}}</div>
                 </div>
                 {{ if eq .Status "calculating" }}
                 <img src="/static/resources/images/expressionStatuses/calculating.png"
-                    class="expression-status align-self-center mx-2" width="30px" height="30px" title="Calculating...">
+                    class="expression-status align-self-center mx-2 rotate-animation" width="30px" height="30px"
+                    title="Calculating...">
                 {{ end }}
                 {{ if eq .Status "calculated" }}
                 <img src="/static/resources/images/expressionStatuses/ok.png"

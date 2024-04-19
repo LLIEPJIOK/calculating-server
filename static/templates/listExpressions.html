@@ -17,7 +17,7 @@
 
 <body>
 
-    <header class="navbar navbar-expand-lg sticky-top bg-primary">
+    <header class="navbar navbar-expand sticky-top bg-primary">
         <nav class="container-xxl flex-wrap flex-lg-nowrap bg-primary" aria-label="Main navigation">
             <div class="navbar-brand text-white fw-bold px-2 px-lg-3">
                 <img src="/static/resources/images/logo.png" alt="calculator" width="30px" height="30px"
@@ -81,7 +81,7 @@
     </header>
 
 
-    <div class="page-header d-flex justify-content-between">
+    <div class="d-flex justify-content-between page-header">
         <h3>
             {{ if eq .SearchId "" }}
             All expressions:
@@ -105,7 +105,8 @@
             </div>
             {{ if eq .Status "calculating" }}
             <img src="/static/resources/images/expressionStatuses/calculating.png"
-                class="expression-status align-self-center mx-2" width="30px" height="30px" title="Calculating...">
+                class="expression-status align-self-center mx-2 rotate-animation" width="30px" height="30px"
+                title="Calculating...">
             {{ end }}
             {{ if eq .Status "calculated" }}
             <img src="/static/resources/images/expressionStatuses/ok.png"

@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -11,44 +10,74 @@ import (
 
 var (
 	ExpressionsChan = make(chan expression.Expression, 1000)
-	numberOfWorkers = 10
-	Workers         = make([]*Worker, numberOfWorkers)
+	numberOfWorkers = 12
+	Workers         = NewSafeWorkersInfo()
+	Mutex           sync.Mutex
 )
 
-type Worker struct {
+type WorkerInfo struct {
 	LastPing time.Time
 	Status   string
-	Id       int
-	Mutex    sync.RWMutex
 }
 
-func (threadInfo *Worker) UpdateStatus(newStatus string) {
-	threadInfo.Mutex.Lock()
-	defer threadInfo.Mutex.Unlock()
-	threadInfo.Status = newStatus
-	threadInfo.LastPing = time.Now()
+func (workerInfo *WorkerInfo) UpdateStatus(newStatus string) {
+	workerInfo.Status = newStatus
+	workerInfo.LastPing = time.Now()
 }
 
-func (threadInfo *Worker) String() string {
-	threadInfo.Mutex.RLock()
-	defer threadInfo.Mutex.RUnlock()
-	return fmt.Sprintf(`Agent #%d: %s. Last ping: %v`, threadInfo.Id, threadInfo.Status, threadInfo.LastPing.Format("02.01.2006 15:04:05"))
+func (workerInfo *WorkerInfo) GetFormatTime() string {
+	return time.Since(workerInfo.LastPing).Round(time.Second).String()
 }
 
-func (threadInfo *Worker) Run() {
+type SafeWorkersInfo struct {
+	WorkersSlice []WorkerInfo
+}
+
+func NewSafeWorkersInfo() SafeWorkersInfo {
+	workers := make([]WorkerInfo, numberOfWorkers)
+	for i := 0; i < numberOfWorkers; i++ {
+		workers[i] = WorkerInfo{
+			LastPing: time.Now(),
+			Status:   "Waiting for expression...",
+		}
+	}
+	return SafeWorkersInfo{
+		WorkersSlice: workers,
+	}
+}
+
+func (safeWorkers *SafeWorkersInfo) UpdateStatus(id int, newStatus string) {
+	Mutex.Lock()
+	defer Mutex.Unlock()
+	safeWorkers.WorkersSlice[id].UpdateStatus(newStatus)
+}
+
+func (safeWorkers *SafeWorkersInfo) GetStatus(id int) string {
+	Mutex.Lock()
+	defer Mutex.Unlock()
+	return safeWorkers.WorkersSlice[id].Status
+}
+
+func (safeWorkers *SafeWorkersInfo) GetFormatTime(id int) string {
+	Mutex.Lock()
+	defer Mutex.Unlock()
+	return safeWorkers.WorkersSlice[id].GetFormatTime()
+}
+
+func Run(workerId int) {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			threadInfo.UpdateStatus("Waiting for expression")
+			Workers.UpdateStatus(workerId, "Waiting for expression...")
 		case exp, ok := <-ExpressionsChan:
 			if !ok {
-				threadInfo.UpdateStatus("Closed")
+				Workers.UpdateStatus(workerId, "Closed")
 				return
 			}
 
-			threadInfo.UpdateStatus(fmt.Sprintf("Calculation expression #%v", exp.Id))
+			Workers.UpdateStatus(workerId, "Calculation expression...")
 			exp.Status = "calculating"
 			database.UpdateExpressionStatus(&exp)
 
@@ -56,7 +85,7 @@ func (threadInfo *Worker) Run() {
 
 			database.UpdateExpressionStatus(&exp)
 			database.UpdateExpressionResult(&exp)
-			threadInfo.UpdateStatus("Waiting for expression")
+			Workers.UpdateStatus(workerId, "Waiting for expression")
 		}
 	}
 }
@@ -67,12 +96,7 @@ func CloseExpressionsChan() {
 
 func Initialize() {
 	for i := range numberOfWorkers {
-		Workers[i] = &Worker{
-			LastPing: time.Now(),
-			Status:   "Waiting for expression",
-			Id:       i + 1,
-		}
-		go Workers[i].Run()
+		go Run(i)
 	}
 
 	expressions := database.GetUncalculatingExpressions()

@@ -80,16 +80,25 @@
     </header>
 
     <div class="page-header">
-        <h3>Computing resources:</h3>
+        <h3>Workers:</h3>
     </div>
-    <div class="list">
-        <ul class="list-group fs-5" id="resources-list">
-            {{ range .Workers }}
-            <li class="list-group-item bg-primary text-white">
-                {{ .String }}
-            </li>
+    <div class="d-flex flex-wrap justify-content-around">
+        {{ range .Indexes }}
+        <div class="d-flex flex-basis-3 flex-wrap bg-expression rounded-3 mb-5">
+            <div class="align-self-center my-2 mx-3 text-white">{{ GetFormatTime . }}</div>
+            {{ if eq (GetStatus .) "Calculation expression..." }}
+            <img src="/static/resources/images/expressionStatuses/calculating.png"
+                class="expression-status align-self-center mx-2 rotate-animation" width="30px" height="30px"
+                title="Calculating...">
             {{ end }}
-        </ul>
+            {{ if eq (GetStatus .) "Waiting for expression..." }}
+            <img src="/static/resources/images/expressionStatuses/waiting.png"
+                class="expression-status align-self-center mx-2 rotate-animation" width="30px" height="30px"
+                title="Waiting...">
+            {{ end }}
+            <div class="d-inline-block text-white rounded-4 m-2 py-1">{{ GetStatus . }}</div>
+        </div>
+        {{ end }}
     </div>
 </body>
 

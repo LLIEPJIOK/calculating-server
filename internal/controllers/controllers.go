@@ -45,6 +45,15 @@ var (
 		"GetOperationTime": expression.GetOperationTime,
 	}
 
+	computingResourcesFuncMap = template.FuncMap{
+		"GetFormatTime": func(id int) string {
+			return workers.Workers.GetFormatTime(id)
+		},
+		"GetStatus": func(id int) string {
+			return workers.Workers.GetStatus(id)
+		},
+	}
+
 	logInTemplate              = template.Must(template.ParseFiles("static/templates/logIn.html"))
 	logInFeedbackTemplate      = template.Must(template.ParseFiles("static/templates/logInFeedback.html"))
 	registerTemplate           = template.Must(template.ParseFiles("static/templates/register.html"))
@@ -53,7 +62,7 @@ var (
 	inputListTemplate          = template.Must(template.ParseFiles("static/templates/inputList.html"))
 	listExpressionsTemplate    = template.Must(template.ParseFiles("static/templates/listExpressions.html"))
 	configurationTemplate      = template.Must(template.New("configuration.html").Funcs(configurationFuncMap).ParseFiles("static/templates/configuration.html"))
-	computingResourcesTemplate = template.Must(template.ParseFiles("static/templates/computingResources.html"))
+	computingResourcesTemplate = template.Must(template.New("computingResources.html").Funcs(computingResourcesFuncMap).ParseFiles("static/templates/computingResources.html"))
 )
 
 func generateAndReturnToken(writer http.ResponseWriter, login string) {
@@ -333,12 +342,12 @@ func ComputingResourcesHandler(writer http.ResponseWriter, request *http.Request
 
 	if err := computingResourcesTemplate.Execute(writer, struct {
 		UserName string
-		Workers  []*workers.Worker
+		Indexes  []int
 	}{
 		UserName: currentUser.Name,
-		Workers:  workers.Workers,
+		Indexes:  []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
 	}); err != nil {
-		log.Printf("inputExpressionTemplate error: %v\n", err)
+		log.Printf("computingResourcesTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

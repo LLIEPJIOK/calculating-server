@@ -243,13 +243,13 @@ func TestExpressionSimpleErrors(t *testing.T) {
 func TestDivisionByZero(t *testing.T) {
 	testCases := []expressionTestCase{
 		{
-			name:           "division by zero",
+			name:           "simple division by zero",
 			exp:            New("", "10 / 0"),
 			expectedStatus: "error",
 			expectedErr:    "invalid expression: division by zero",
 		},
 		{
-			name:           "division by zero",
+			name:           "complex division by zero",
 			exp:            New("", "10 * 1 - 6 * (9 - 4) / (5 * (5 - 6) + 5)"),
 			expectedStatus: "error",
 			expectedErr:    "invalid expression: division by zero",

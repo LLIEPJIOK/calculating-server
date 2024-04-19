@@ -84,3 +84,55 @@
 .bg-expression {
     background-color: #6ca6fd;
 }
+
+.imitated-animated-check {
+    height: 35px;
+    width: 35px;
+}
+
+.animated-check path {
+    fill: none;
+    stroke: #88d84b;
+    stroke-width: 4;
+    stroke-dasharray: 23;
+    stroke-dashoffset: 23;
+    animation: draw-check 1s linear forwards;
+    stroke-linecap: round;
+    stroke-linejoin: round
+}
+
+@keyframes draw-check {
+    to {
+        stroke-dashoffset: 0;
+        opacity: 0;
+    }
+
+    50% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+.time {
+    height: 12px;
+    font-size: 10px;
+}
+
+.flex-basis-3 {
+    width: 30%;
+    min-width: 300px;
+}
+
+.rotate-animation {
+    animation: rotate 2s linear infinite;
+}
+
+@keyframes draw {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

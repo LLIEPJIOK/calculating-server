@@ -1,26 +1,35 @@
 services:
   app:
     build: ./
-    command: bash -c "go test -v ./internal/database/* && go test -v ./internal/expression/* && ./calculating-server"
     ports:
       - 8080:8080
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      - DB_PASSWORD=secret
+    networks:
+      - app
+    command: bash -c "go test -v ./internal/database/* && go test -v ./internal/expression/* && ./calculating-server"
 
   db:
     image: postgres:latest
     restart: on-failure
     volumes:
-      - ./.database/postgres/data:/var/lib/postgresql/data
+      - app:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=secret
     ports:
       - 5432:5432
+    networks:
+      - app
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 10
+
+networks:
+  app:
+
+
+volumes:
+  app:

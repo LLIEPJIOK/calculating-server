@@ -11,7 +11,8 @@
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"
-        integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"></script>
+        integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
+        crossorigin="anonymous"></script>
     <title>Document</title>
 </head>
 
@@ -81,7 +82,7 @@
     </header>
 
     <div class="d-flex flex-column justify-content-center align-items-center input-area">
-        <div class="rounded-3 p-4 bg-primary text-white input-block">
+        <div class="rounded-3 p-4 bg-expression text-white input-block">
             <form hx-put="/configuration/change" hx-swap="none">
                 <div class="mb-2">
                     <label for="time-plus">+ execution time (ms)</label>
@@ -104,11 +105,19 @@
                         value="{{ GetOperationTime .OperationsTime  "time-divide" }}" />
                 </div>
                 <div class="d-flex justify-content-center">
-                    <button type="submit" class="btn btn-outline-light btn-submit-input">Apply</button>
+                    <div class="imitated-animated-check mx-1"></div>
+                    <button type="submit" class="btn btn-outline-light btn-submit-input"
+                        id="configuration-submit">Apply</button>
+                    <svg class="imitated-animated-check align-self-center mx-1" viewBox="0 0 24 24" id="check">
+                        <path d="M4.1 12.7L9 17.6 20.3 6.3" fill="none" />
+                    </svg>
                 </div>
-            </form>
         </div>
+        </form>
     </div>
+    </div>
+
+    <script src="/static/scripts/changedConfiguration.js"></script>
 
 </body>
 
