@@ -23,7 +23,10 @@
     <div class="feedback">{{ .PasswordFeedback }}</div>
 </div>
 <div class="d-flex justify-content-center">
-    <span class="spinner-border" aria-hidden="true"></span>
-    <button type="submit" class="btn btn-primary btn-submit-input btn-submit">Log In</button>
-    <span class="spinner-border text-primary" id="spinner" role="status" aria-hidden="true"></span>
+    <div class="d-flex justify-content-center">
+        <button type="submit" class="btn btn-primary btn-submit-input btn-submit" id="submit-button">
+            Log In
+        </button>
+        <span class="text-primary spinner-border" id="spinner" role="status" aria-hidden="true"></span>
+    </div>
 </div>

@@ -44,7 +44,6 @@ var (
 	configurationFuncMap = template.FuncMap{
 		"GetOperationTime": expression.GetOperationTime,
 	}
-
 	computingResourcesFuncMap = template.FuncMap{
 		"GetFormatTime": func(id int) string {
 			return workers.Workers.GetFormatTime(id)
@@ -268,17 +267,17 @@ func ListExpressionsHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	searchId := request.URL.Query().Get("id")
-	exps := database.GetExpressionsById(searchId, currentUser.Login)
+	searchExpression := request.URL.Query().Get("search")
+	exps := database.GetExpressionsByExpression(searchExpression, currentUser.Login)
 	// TODO: create struct
 	if err := listExpressionsTemplate.Execute(writer, struct {
-		UserName string
-		Exps     []*expression.Expression
-		SearchId string
+		UserName         string
+		Exps             []*expression.Expression
+		SearchExpression string
 	}{
-		UserName: currentUser.Name,
-		Exps:     exps,
-		SearchId: searchId,
+		UserName:         currentUser.Name,
+		Exps:             exps,
+		SearchExpression: searchExpression,
 	}); err != nil {
 		log.Printf("inputExpressionTemplate error: %v\n", err)
 		http.Error(writer, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

@@ -44,16 +44,28 @@
                 <div class="offcanvas-body p-4 pt-0 p-lg-0">
                     <hr class="d-lg-none text-white-50">
                     <ul class="navbar-nav flexflex-wrap">
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 mx-lg-2 text-white"></div>
+                        </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/input-expression">Input
                                 expression</a>
+                        </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/list-expressions">List
                                 expressions</a>
                         </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
+                        </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/configuration">Configuration</a>
+                        </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/computing-resources">Resources</a>
@@ -65,7 +77,8 @@
                             <div class="nav-link text-white" href="">
                                 <img src="/static/resources/images/user.png" alt="user" width="25px" height="25px"
                                     class="d-inline-block">
-                                {{ .UserName }}</>
+                                {{ .UserName }}
+                            </div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/log-out">
@@ -84,7 +97,7 @@
     </div>
     <div class="d-flex flex-wrap justify-content-around">
         {{ range .Indexes }}
-        <div class="d-flex flex-basis-3 flex-wrap bg-expression rounded-3 mb-5">
+        <div class="d-flex flex-basis-3 flex-wrap bg-expression rounded-3 mb-5 mx-2">
             <div class="align-self-center my-2 mx-3 text-white">{{ GetFormatTime . }}</div>
             {{ if eq (GetStatus .) "Calculation expression..." }}
             <img src="/static/resources/images/expressionStatuses/calculating.png"

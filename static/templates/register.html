@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"
         integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
         crossorigin="anonymous"></script>
-    <title>Document</title>
+    <title>Register</title>
 </head>
 
 <body class="bg-primary">
@@ -54,9 +54,12 @@
                         <div class="feedback"></div>
                 </div>
                 <div class="d-flex justify-content-center">
-                    <span class="spinner-border" aria-hidden="true"></span>
-                    <button type="submit" class="btn btn-primary btn-submit-input btn-submit">Register</button>
-                    <span class="spinner-border text-primary" id="spinner" role="status" aria-hidden="true"></span>
+                    <div class="d-flex justify-content-center">
+                        <button type="submit" class="btn btn-primary btn-submit-input btn-submit" id="submit-button">
+                            Log In
+                        </button>
+                        <span class="text-primary spinner-border" id="spinner" role="status" aria-hidden="true"></span>
+                    </div>
                 </div>
             </form>
             <div class="d-flex justify-content-center mt-2">

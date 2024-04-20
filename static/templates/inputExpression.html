@@ -47,16 +47,28 @@
                 <div class="offcanvas-body p-4 pt-0 p-lg-0">
                     <hr class="d-lg-none text-white-50">
                     <ul class="navbar-nav flexflex-wrap">
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 mx-lg-2 text-white"></div>
+                        </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/input-expression">Input
                                 expression</a>
+                        </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/list-expressions">List
                                 expressions</a>
                         </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
+                        </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/configuration">Configuration</a>
+                        </li>
+                        <li class="nav-item py-0 py-lg-2">
+                            <div class="my-vr d-none d-lg-flex h-100 text-white"></div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/computing-resources">Resources</a>
@@ -68,7 +80,8 @@
                             <div class="nav-link text-white" href="">
                                 <img src="/static/resources/images/user.png" alt="user" width="25px" height="25px"
                                     class="d-inline-block">
-                                {{ .UserName }}</>
+                                {{ .UserName }}
+                            </div>
                         </li>
                         <li class="nav-item px-2 px-lg-3">
                             <a class="nav-link text-white" href="/log-out">
@@ -85,13 +98,19 @@
     <div class="page-header">
         <h3>Last inputs:</h3>
     </div>
-    <div class="d-flex justify-content-between">
+    <div class="d-flex flex-wrap-reverse justify-content-between">
         <div class="list" id="input-list">
             {{ range .Expressions }}
-            <div class="d-flex bg-expression rounded-3 m-2 mt-0 justify-content-between">
+            <div class="d-flex bg-expression rounded-3 m-2 justify-content-between">
                 <div>
                     <div class="d-inline-block bg-white rounded-4 m-2 px-3 py-1">{{.Id}}</div>
-                    <div class="d-inline-block text-white rounded-4 m-2 py-1">{{.Exp}} = {{.Result}}</div>
+                    <div class="d-inline-block text-white rounded-4 m-2 py-1">{{.Exp}} =
+                        {{ if eq .Status "calculated" }}
+                        {{ .Result }}
+                        {{ else }}
+                        ?
+                        {{ end }}
+                    </div>
                 </div>
                 {{ if eq .Status "calculating" }}
                 <img src="/static/resources/images/expressionStatuses/calculating.png"
@@ -108,25 +127,27 @@
                 {{ end }}
                 {{ if eq .Status "error" }}
                 <img src="/static/resources/images/expressionStatuses/error.png"
-                    class="expression-status align-self-center mx-2" width="30px" height="30px" title="Error">
+                    class="expression-status align-self-center mx-2" width="30px" height="30px"
+                    title="Error: {{ .Err }}"">
                 {{ end }}
             </div>
             {{ end }}
         </div>
-        <div class="col-4 me-4">
-            <div class="rounded-3 p-4 bg-expression text-white align-self-stretch">
-                <form hx-post="/add-expression" hx-target="#input-list" hx-swap="innerHTML">
-                    <div class="mb-3">
-                        <label for="expression">Input expression</label>
-                        <input type="text" name="expression" id="expression" class="form-control" />
-                    </div>
-                    <div class="d-flex justify-content-center">
-                        <button type="submit" class="btn btn-outline-light btn-submit-input btn-submit">Submit</button>
-                    </div>
-                </form>
+        <div class=" input-expression mt-2">
+                <div class="rounded-3 p-4 bg-expression text-white align-self-stretch">
+                    <form hx-post="/add-expression" hx-target="#input-list" hx-swap="innerHTML">
+                        <div class="mb-3">
+                            <label for="expression">Input expression</label>
+                            <input type="text" name="expression" id="expression" class="form-control" />
+                        </div>
+                        <div class="d-flex justify-content-center">
+                            <button type="submit"
+                                class="btn btn-outline-light btn-submit-input btn-submit">Submit</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 </body>
 
 </html>
