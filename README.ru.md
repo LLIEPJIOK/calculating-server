@@ -61,6 +61,6 @@ Calculation server - это сервер, который вычисляет вы
 
    Сервер извлекает информацию из базы данных и отображает ее.
 
-![Схема работы](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/WorkingScheme.png)
+![Схема работы](https://github.com/LLIEPJIOK/calculating-server/blob/master/images/WorkingScheme.jpg)
 
 *Примечание: В настоящее время нет автоматического обновления данных на странице. Чтобы увидеть изменения, вы должны перезагрузить страницу.*

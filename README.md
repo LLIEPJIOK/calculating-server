@@ -64,6 +64,6 @@ After that the server handles request, and there are several possible scenarios:
 
    The server retrieves information from the database and displays it.
 
-![Working scheme](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/WorkingScheme.png)
+![Working scheme](https://github.com/LLIEPJIOK/calculating-server/blob/master/images/WorkingScheme.jpg)
 
 *Note: Currently, there is no automatic updating of data on the page. To see the changes, you must reload the page.*
