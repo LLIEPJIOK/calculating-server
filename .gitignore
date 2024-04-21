@@ -18,7 +18,5 @@
 go.work
 
 .vscode/
-.database/
 cover.html
 cover.out
-.env

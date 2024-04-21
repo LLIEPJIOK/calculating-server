@@ -23,7 +23,7 @@ func checkDatabaseExistence() (bool, error) {
 			SELECT 1 
 			FROM pg_database 
 			WHERE datname = $1
-	)`, os.Getenv("expressionDatabaseName")).Scan(&exists)
+	)`, os.Getenv("DATABASE_NAME")).Scan(&exists)
 	return exists, err
 }
 
@@ -42,7 +42,7 @@ func deleteDatabase() {
 	Close()
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=disable",
-		os.Getenv("host"), os.Getenv("port"), os.Getenv("databaseUser"), os.Getenv("password"))
+		os.Getenv("HOST"), os.Getenv("PORT"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
 	db, err := sql.Open("postgres", connStr)
 	defer func() {
 		if err := db.Close(); err != nil {
@@ -60,11 +60,11 @@ func deleteDatabase() {
 		DELETE 
 			FROM pg_database 
 			WHERE datname = $1
-		`, os.Getenv("expressionDatabaseName"))
+		`, os.Getenv("DATABASE_NAME"))
 }
 
 func TestConfiguration(t *testing.T) {
-	os.Setenv("expressionDatabaseName", "configuration_test_db")
+	os.Setenv("DATABASE_NAME", "configuration_test_db")
 	defer deleteDatabase()
 	for i := 0; i < 2; i++ {
 		Configure()

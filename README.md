@@ -1,43 +1,48 @@
-## About CalculationServer
+## About calculation server
 
-Read this in other languages: [Russian](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/README.ru.md).
+Read this in other languages: [Русский](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/README.ru.md).
 
-CalculationServer is a server that calculates expressions within a specified operation calculation time.
+Calculation server is a server that calculates expressions within a specified operation calculation time.
 
-The project also utilizes a [PostgresSQL](https://www.postgresql.org) database, [Bootstrap](https://getbootstrap.com), and [HTMX](https://htmx.org). Bootstrap is employed to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
+The project uses a [PostgresSQL](https://www.postgresql.org) database, [Bootstrap](https://getbootstrap.com) and [HTMX](https://htmx.org). Bootstrap is used to create a fast and visually appealing interface, while HTMX is used to send requests and handle them in a convenient manner.
 
 ## Getting started
-To run the server, you need:
-- [Go](https://golang.org/dl) version 1.22 or later.
-- [PostgreSQL](https://postgresql.org/download). You may need a VPN to install.
+To run the server, you only need [Docker](https://www.docker.com/products/docker-desktop/) running on your computer.
 
-To start working with the server, follow these steps:
+To start working with the server, follow these steps in console:
 1. Clone the repository:
    ```bash
-   git clone https://github.com/LLIEPJIOK/CalculatingServer.git
+   git clone https://github.com/LLIEPJIOK/calculating-server.git
    ```
-2. Open the `expressions/database.go` file and change the `port` and `password` to match your PostgreSQL port and password.
-3. Open console in project folder:
-   - Download required packages
-      ```bash
-      go mod download
-      ```
-   - Run the program
-      ```bash
-      go run main.go
-      ```
+2. Go to the project folder:
+   ```bash
+   cd calculating-server
+   ```
+3. Start a docker container with the project:
+   ```bash
+   docker-compose up
+   ```
 4. Open [`localhost:8080`](http://localhost:8080) in your browser.
 
+If you launched the application for the first time, you will need to register. Otherwise just log in. After that, the server gives you access to perform operations on expressions and remember you for 1 day. Now perform desired operations and see the results.
+
+*Note: When the container starts, all tests are executed, so if one test fails, the entire program will not start.*
+
 ## Code structure
-1. `main.go` - file for the server where requests are processed.
-2. `expressions/expressions.go` - file for handling expressions.
-3. `expressions/database.go` - file for interacting with the PostgreSQL database.
-4. `static/` - folder for the visual interface. It contains CSS styles, JS script for clearing the input field after sending an expression, and HTML templates with Bootstrap and HTMX.
+1. `main.go` - file to initialize the project.
+2. `internal/controllers` - folder with files for the server where requests are processed.
+3. `internal/database` - folder with files for interacting with the PostgreSQL database.
+4. `internal/expression` - folder with files for processing expressions.
+5. `internal/user` - folder with files for processing users.
+6. `internal/workers` - folder with files for processing workers.
+7. `static/` - folder for visual interface. It contains CSS styles, JS scripts, icons and HTML templates with Bootstrap and HTMX.
 
 ## How it works
 The program consists of a server that handles all requests and agents, which are goroutines responsible for calculating expressions asynchronously. Goroutines also update their status (e.g., waiting, calculating, etc.) every 5 seconds if they are waiting for an expression, as well as before and after performing calculations.
 
-When user send a request (e.g., open the page, submit an expression, etc.), the server handles it, and there are several possible scenarios:
+Before every user request (e.g., open the page, submit an expression, etc.) the server checks for authorization. If the user is authorized then the server give him access to perform operations on expressions, but not to log in or register. Otherwise, it only allows to log in or register. Authentication was implemented using [JWT](https://jwt.io/).
+
+After that the server handles request, and there are several possible scenarios:
 
 1. **Request to calculate an expression:**
    
@@ -51,6 +56,10 @@ When user send a request (e.g., open the page, submit an expression, etc.), the 
 
    The server updates this data in the database.
 
+3. **Log in or register**
+
+   The server checks the validity of the data. If the data is correct, then the server gives you access to perform operations on expressions and record your data in cookie for 1 day to remember that you have registered, otherwise it shows errors.
+
 3. **Other requests:**
 
    The server retrieves information from the database and displays it.
@@ -58,6 +67,3 @@ When user send a request (e.g., open the page, submit an expression, etc.), the 
 ![Working scheme](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/WorkingScheme.png)
 
 *Note: Currently, there is no automatic updating of data on the page. To see the changes, you must reload the page.*
-
-## Usage example
-![Usage example](https://github.com/LLIEPJIOK/CalculatingServer/blob/master/images/ServerUsage.gif)

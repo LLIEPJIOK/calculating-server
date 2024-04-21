@@ -8,7 +8,7 @@ services:
         condition: service_healthy
     networks:
       - app
-    command: bash -c "go test -v ./internal/database/* && go test -v ./internal/expression/* && ./calculating-server"
+    command: bash -c "go test -v ./internal/database/* && go test -v ./internal/expression/* && go test -v ./internal/workers/* && ./calculating-server"
 
   db:
     image: postgres:latest
