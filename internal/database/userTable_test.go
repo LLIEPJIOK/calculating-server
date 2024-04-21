@@ -1,6 +1,7 @@
 package database
 
 import (
+	"os"
 	"strconv"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestUserTable(t *testing.T) {
 		},
 	}
 
-	expressionDatabaseName = "user_table_test_db"
+	os.Setenv("expressionDatabaseName", "user_table_test_db")
 	Configure()
 	defer deleteDatabase()
 

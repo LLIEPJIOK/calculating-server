@@ -243,7 +243,7 @@ func AddExpressionHandler(writer http.ResponseWriter, request *http.Request) {
 	if err == nil {
 		exp.OperationsTimes = operationsTime
 	}
-	if exp.Status == "" {
+	if exp.Status != "error" {
 		exp.Status = "in queue"
 	}
 	database.InsertExpression(&exp)

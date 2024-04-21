@@ -12,7 +12,6 @@ var (
 	ExpressionsChan = make(chan expression.Expression, 1000)
 	numberOfWorkers = 12
 	Workers         = NewSafeWorkersInfo()
-	Mutex           sync.Mutex
 )
 
 type WorkerInfo struct {
@@ -31,6 +30,7 @@ func (workerInfo *WorkerInfo) GetFormatTime() string {
 
 type SafeWorkersInfo struct {
 	WorkersSlice []WorkerInfo
+	Mutex        *sync.Mutex
 }
 
 func NewSafeWorkersInfo() SafeWorkersInfo {
@@ -43,24 +43,25 @@ func NewSafeWorkersInfo() SafeWorkersInfo {
 	}
 	return SafeWorkersInfo{
 		WorkersSlice: workers,
+		Mutex:        &sync.Mutex{},
 	}
 }
 
 func (safeWorkers *SafeWorkersInfo) UpdateStatus(id int, newStatus string) {
-	Mutex.Lock()
-	defer Mutex.Unlock()
+	safeWorkers.Mutex.Lock()
+	defer safeWorkers.Mutex.Unlock()
 	safeWorkers.WorkersSlice[id].UpdateStatus(newStatus)
 }
 
 func (safeWorkers *SafeWorkersInfo) GetStatus(id int) string {
-	Mutex.Lock()
-	defer Mutex.Unlock()
+	safeWorkers.Mutex.Lock()
+	defer safeWorkers.Mutex.Unlock()
 	return safeWorkers.WorkersSlice[id].Status
 }
 
 func (safeWorkers *SafeWorkersInfo) GetFormatTime(id int) string {
-	Mutex.Lock()
-	defer Mutex.Unlock()
+	safeWorkers.Mutex.Lock()
+	defer safeWorkers.Mutex.Unlock()
 	return safeWorkers.WorkersSlice[id].GetFormatTime()
 }
 

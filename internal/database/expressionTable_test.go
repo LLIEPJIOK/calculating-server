@@ -1,13 +1,25 @@
 package database
 
 import (
+	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/LLIEPJIOK/calculating-server/internal/expression"
 	"github.com/LLIEPJIOK/calculating-server/internal/user"
 )
+
+func expressionSliceToString(expressions []*expression.Expression) string {
+	result := "[ "
+	for _, exp := range expressions {
+		result += fmt.Sprint(*exp)
+	}
+	result += " ]"
+	return result
+}
 
 func expContainsInSlice(expressions []*expression.Expression, target *expression.Expression) bool {
 	for _, exp := range expressions {
@@ -32,7 +44,7 @@ func checkUncalculatingExpressions(t *testing.T, expressions []*expression.Expre
 	uncalculatingExpressions := GetUncalculatingExpressions()
 	for _, exp := range expressions {
 		if (exp.Status == "calculating" || exp.Status == "in queue") && !expContainsInSlice(uncalculatingExpressions, exp) {
-			t.Fatalf("expression %v isn't contained in uncalculating expressions %v", exp, uncalculatingExpressions)
+			t.Fatalf("expression %v isn't contained in uncalculating expressions %v", exp, expressionSliceToString(uncalculatingExpressions))
 		}
 	}
 }
@@ -43,7 +55,7 @@ func checkLastExpressions(t *testing.T, expressions []*expression.Expression, lo
 	for i := len(expressions) - 1; i >= 0; i-- {
 		if expressions[i].Login == login {
 			if !expContainsInSlice(lastExpressions, expressions[i]) {
-				t.Fatalf("expression %v isn't contained in last expressions %v", expressions[i], lastExpressions)
+				t.Fatalf("expression %v isn't contained in last expressions %v", expressions[i], expressionSliceToString(lastExpressions))
 			}
 			counter++
 			if counter == 10 {
@@ -52,20 +64,54 @@ func checkLastExpressions(t *testing.T, expressions []*expression.Expression, lo
 		}
 	}
 	if len(lastExpressions) != counter {
-		t.Fatalf("some extra expressions are contained in last expressions %v", lastExpressions)
+		t.Fatalf("some extra expressions are contained in last expressions %v", expressionSliceToString(lastExpressions))
+	}
+}
+
+func checkExpressionsById(t *testing.T, expressions []*expression.Expression) {
+	for _, exp := range expressions {
+		expressionFromDatabase := GetExpressionById(exp.Id, exp.Login)
+		if !exp.Equals(expressionFromDatabase) {
+			t.Fatalf("expression: expected: %v, but got: %v", exp, expressionFromDatabase)
+		}
+	}
+}
+
+func checkingExpressionsByExpression(t *testing.T, expressions []*expression.Expression, expressionString, userLogin string) {
+	findExpressions := GetExpressionsByExpression(expressionString, userLogin)
+	for _, exp := range expressions {
+		if strings.Contains(exp.Exp, expressionString) && exp.Login == userLogin && !expContainsInSlice(findExpressions, exp) {
+			t.Fatalf("expression %v isn't contained in find expressions %v", exp, expressionSliceToString(findExpressions))
+		}
 	}
 }
 
 func checkAll(t *testing.T, expressions []*expression.Expression) {
-	checkMaxId(t, "1", 3)
-	checkMaxId(t, "2", 11)
-	checkMaxId(t, "3", 3)
+	t.Run("checking max id", func(t *testing.T) {
+		checkMaxId(t, "1", 3)
+		checkMaxId(t, "2", 11)
+		checkMaxId(t, "3", 3)
+	})
 
-	checkUncalculatingExpressions(t, expressions)
+	t.Run("checking uncalculating expressions", func(t *testing.T) {
+		checkUncalculatingExpressions(t, expressions)
+	})
 
-	checkLastExpressions(t, expressions, "1")
-	checkLastExpressions(t, expressions, "2")
-	checkLastExpressions(t, expressions, "3")
+	t.Run("checking last expressions", func(t *testing.T) {
+		checkLastExpressions(t, expressions, "1")
+		checkLastExpressions(t, expressions, "2")
+		checkLastExpressions(t, expressions, "3")
+	})
+
+	t.Run("checking expressions by id", func(t *testing.T) {
+		checkExpressionsById(t, expressions)
+	})
+
+	t.Run("checking expressions by expression string", func(t *testing.T) {
+		checkingExpressionsByExpression(t, expressions, "1+", "1")
+		checkingExpressionsByExpression(t, expressions, "+", "3")
+		checkingExpressionsByExpression(t, expressions, "/", "2")
+	})
 }
 
 func TestExpressionTable(t *testing.T) {
@@ -214,7 +260,7 @@ func TestExpressionTable(t *testing.T) {
 		},
 	}
 
-	expressionDatabaseName = "expression_table_test_db"
+	os.Setenv("expressionDatabaseName", "expression_table_test_db")
 	Configure()
 	defer deleteDatabase()
 

@@ -60,13 +60,29 @@ func InsertExpression(exp *expression.Expression) {
 	}
 }
 
+func GetExpressionById(id uint64, userLogin string) *expression.Expression {
+	exp := &expression.Expression{}
+	err := dataBase.QueryRow(`
+		SELECT 
+			user_login, id, exp, result, status, err, creation_time, calculation_time
+		FROM "Expression"
+		WHERE id = $1 and user_login = $2
+		ORDER BY creation_time DESC 
+		`, id, userLogin).Scan(&exp.Login, &exp.Id, &exp.Exp, &exp.Result, &exp.Status, &exp.Err, &exp.CreationTime, &exp.CalculationTime)
+	if err != nil {
+		log.Println("error in getting data from database:", err)
+		return nil
+	}
+	return exp
+}
+
 func GetExpressionsByExpression(exp, userLogin string) []*expression.Expression {
 	rows, err := dataBase.Query(`
 		SELECT 
 			user_login, id, exp, result, status, err, creation_time, calculation_time
 		FROM "Expression"
 		WHERE exp LIKE '%' || $1 || '%' and user_login = $2
-		ORDER BY creation_time DESC 
+		ORDER BY creation_time DESC
 		`, exp, userLogin)
 	if err != nil {
 		log.Println("error in getting data from database:", err)

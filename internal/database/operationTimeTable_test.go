@@ -1,6 +1,7 @@
 package database
 
 import (
+	"os"
 	"strconv"
 	"testing"
 
@@ -76,7 +77,7 @@ func TestOperationTimeTable(t *testing.T) {
 		},
 	}
 
-	expressionDatabaseName = "operation_time_table_test_db"
+	os.Setenv("expressionDatabaseName", "operation_time_table_test_db")
 	Configure()
 	defer deleteDatabase()
 

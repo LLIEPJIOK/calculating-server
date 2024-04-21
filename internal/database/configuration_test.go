@@ -4,8 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	if err := godotenv.Load("../../.env"); err != nil {
+		log.Fatal("No .env file found")
+	}
+}
 
 func checkDatabaseExistence() (bool, error) {
 	var exists bool
@@ -14,7 +23,7 @@ func checkDatabaseExistence() (bool, error) {
 			SELECT 1 
 			FROM pg_database 
 			WHERE datname = $1
-	)`, expressionDatabaseName).Scan(&exists)
+	)`, os.Getenv("expressionDatabaseName")).Scan(&exists)
 	return exists, err
 }
 
@@ -32,8 +41,8 @@ func checkTableExistence(tableName string) (bool, error) {
 func deleteDatabase() {
 	Close()
 
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
-		host, port, databaseUser, password)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=disable",
+		os.Getenv("host"), os.Getenv("port"), os.Getenv("databaseUser"), os.Getenv("password"))
 	db, err := sql.Open("postgres", connStr)
 	defer func() {
 		if err := db.Close(); err != nil {
@@ -51,11 +60,11 @@ func deleteDatabase() {
 		DELETE 
 			FROM pg_database 
 			WHERE datname = $1
-		`, expressionDatabaseName)
+		`, os.Getenv("expressionDatabaseName"))
 }
 
 func TestConfiguration(t *testing.T) {
-	expressionDatabaseName = "configuration_test_db"
+	os.Setenv("expressionDatabaseName", "configuration_test_db")
 	defer deleteDatabase()
 	for i := 0; i < 2; i++ {
 		Configure()

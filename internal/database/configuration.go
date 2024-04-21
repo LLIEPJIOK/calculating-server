@@ -4,26 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	host         = "localhost"
-	port         = 5432
-	databaseUser = "postgres"
-	password     = "123409874567"
-)
-
 var (
-	expressionDatabaseName = "expressions_db"
-
 	dataBase *sql.DB
 )
 
 func createDatabaseIfNotExists() {
-	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable",
-		host, port, databaseUser, password)
+	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=disable",
+		os.Getenv("host"), os.Getenv("port"), os.Getenv("databaseUser"), os.Getenv("password"))
 	dataBase, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		log.Fatal("error open postgres:", err)
@@ -39,13 +31,13 @@ func createDatabaseIfNotExists() {
 			SELECT 1 
 			FROM pg_database 
 			WHERE datname = $1
-	)`, expressionDatabaseName).Scan(&exists)
+	)`, os.Getenv("expressionDatabaseName")).Scan(&exists)
 	if err != nil {
 		log.Fatal("error checking database existence:", err)
 	}
 
 	if !exists {
-		_, err = dataBase.Exec(`CREATE DATABASE ` + expressionDatabaseName)
+		_, err = dataBase.Exec(`CREATE DATABASE ` + os.Getenv("expressionDatabaseName"))
 		if err != nil {
 			log.Fatal("error creating database:", err)
 		}
@@ -69,8 +61,8 @@ func Close() {
 func Configure() {
 	createDatabaseIfNotExists()
 
-	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, databaseUser, password, expressionDatabaseName)
+	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("host"), os.Getenv("port"), os.Getenv("databaseUser"), os.Getenv("password"), os.Getenv("expressionDatabaseName"))
 	var err error
 	dataBase, err = sql.Open("postgres", connectionString)
 	if err != nil {

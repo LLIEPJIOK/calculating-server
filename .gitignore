@@ -21,3 +21,4 @@ go.work
 .database/
 cover.html
 cover.out
+.env

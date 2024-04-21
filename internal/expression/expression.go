@@ -185,15 +185,6 @@ func (exp *Expression) Calculate() {
 	exp.Result = st[0]
 }
 
-func (exp Expression) String() string {
-	str := fmt.Sprintf("Id: `%d`, Expression: `%s`, Creation time: `%s`, Status: `%s`",
-		exp.Id, exp.Exp, exp.CreationTime.Format("02.01.2006 15:04:05"), exp.Status)
-	if exp.Status == "calculated" {
-		str += fmt.Sprintf(",  Result: `%v`, Calculation time: `%s`", exp.Result, exp.CalculationTime.Format("2006-01-02 15:04:05"))
-	}
-	return str
-}
-
 func add(a, b float64, ms uint64) float64 {
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return a + b
